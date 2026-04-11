@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
   <div class="bg-orbs">
@@ -28,30 +29,80 @@
 
     <main class="app-grid" id="appGrid"></main>
 
+    <!-- ダッシュボード -->
+    <section class="dashboard">
+      <div class="section-divider">
+        <span class="section-label">ダッシュボード</span>
+      </div>
+
+      <div class="dash-grid">
+
+        <!-- 最新写真（全幅） -->
+        <a href="https://koto-chan.vercel.app/" target="_blank" rel="noopener"
+           class="dash-card card-photo" id="cardPhoto">
+          <div class="dash-card-label">📸 最新のことね</div>
+          <div class="photo-content" id="photoContent">
+            <div class="dash-skeleton photo-skeleton"></div>
+          </div>
+        </a>
+
+        <!-- ことねの成長 -->
+        <div class="dash-card card-age">
+          <div class="dash-card-label">🍀 ことねの成長</div>
+          <div class="age-display" id="ageDisplay">
+            <span class="age-num" id="ageYears">-</span><span class="age-unit">歳</span>
+            <span class="age-num" id="ageMonths">-</span><span class="age-unit">ヶ月</span>
+          </div>
+          <div class="age-days" id="ageDays">計算中…</div>
+          <div class="age-next" id="ageNext"></div>
+        </div>
+
+        <!-- 次のキャンプ -->
+        <div class="dash-card card-camp">
+          <div class="dash-card-label">🏕️ 次のキャンプ</div>
+          <div class="camp-content">
+            <div class="camp-emoji">⛺</div>
+            <div class="camp-status">準備中</div>
+            <div class="camp-hint">アプリ実装予定</div>
+          </div>
+        </div>
+
+        <!-- 話し合いトピック（全幅） -->
+        <a href="https://konya-hanaso.vercel.app/" target="_blank" rel="noopener"
+           class="dash-card card-topics" id="cardTopics">
+          <div class="dash-card-label">💬 話し合いたいこと</div>
+          <div id="topicsContent">
+            <div class="dash-skeleton dash-skeleton-line"></div>
+            <div class="dash-skeleton dash-skeleton-line" style="margin-top:8px;width:75%"></div>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
     <footer class="footer">
       <p>佐瀬家 プライベートアプリ</p>
     </footer>
   </div>
 
   <script>
+    // ===== アプリ一覧 =====
     var APPS = [
       {
-        emoji:       '📸',
-        name:        '今日のことちゃん',
-        desc:        '娘の成長アルバム。毎日1枚の写真と短いコメントで記録。',
-        url:         'https://koto-chan.vercel.app/',
-        color:       '#E8748A',
-        colorLight:  '#FFF0F5',
-        colorPale:   '#FCE8ED'
+        emoji:      '📸',
+        name:       '今日のことちゃん',
+        desc:       '娘の成長アルバム。毎日1枚の写真と短いコメントで記録。',
+        url:        'https://koto-chan.vercel.app/',
+        color:      '#E8748A',
+        colorLight: '#FFF0F5'
       },
       {
-        emoji:       '🌙',
-        name:        'こんや話そ',
-        desc:        'ふたりの話し合いノート。いつか話したいことをメモして解決へ。',
-        url:         'https://konya-hanaso.vercel.app/',
-        color:       '#F59E0B',
-        colorLight:  '#FEF3C7',
-        colorPale:   '#FFFDF7'
+        emoji:      '🌙',
+        name:       'こんや話そ',
+        desc:       'ふたりの話し合いノート。いつか話したいことをメモして解決へ。',
+        url:        'https://konya-hanaso.vercel.app/',
+        color:      '#F59E0B',
+        colorLight: '#FEF3C7'
       }
     ];
 
@@ -59,9 +110,9 @@
       var grid = document.getElementById('appGrid');
       APPS.forEach(function(app) {
         var card = document.createElement('a');
-        card.href   = app.url;
-        card.target = '_blank';
-        card.rel    = 'noopener noreferrer';
+        card.href      = app.url;
+        card.target    = '_blank';
+        card.rel       = 'noopener noreferrer';
         card.className = 'app-card';
         card.innerHTML =
           '<div class="card-icon-wrap" style="background:' + app.colorLight + '">' +
@@ -76,7 +127,129 @@
       });
     }
 
-    renderApps();
+    // ===== ダッシュボード =====
+    var db = null;
+    var BIRTHDAY = new Date('2024-02-19T00:00:00');
+
+    function esc(s) {
+      var d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    // 年齢計算
+    function calcAge() {
+      var now    = new Date();
+      var years  = now.getFullYear() - BIRTHDAY.getFullYear();
+      var months = now.getMonth()    - BIRTHDAY.getMonth();
+      if (months < 0) { years--; months += 12; }
+      var days = Math.floor((now - BIRTHDAY) / 86400000);
+      // 次の月齢まで何日か
+      var nextBday = new Date(BIRTHDAY);
+      nextBday.setFullYear(now.getFullYear());
+      nextBday.setMonth(BIRTHDAY.getMonth() + Math.floor((now - BIRTHDAY) / (30.44 * 86400000)) + 1);
+      var daysToNext = Math.ceil((nextBday - now) / 86400000);
+      return { years: years, months: months, days: days, daysToNext: daysToNext };
+    }
+
+    function renderAge() {
+      var age = calcAge();
+      document.getElementById('ageYears').textContent  = age.years;
+      document.getElementById('ageMonths').textContent = age.months;
+      document.getElementById('ageDays').textContent   = '生後 ' + age.days.toLocaleString() + ' 日目';
+    }
+
+    // 最新写真
+    async function loadLatestPhoto() {
+      var el = document.getElementById('photoContent');
+      try {
+        var r = await db
+          .from('posts')
+          .select('post_date, image_url, comment')
+          .order('post_date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (r.error || !r.data) {
+          el.innerHTML = '<div class="dash-empty-photo">📷 まだ写真がありません</div>';
+          return;
+        }
+
+        var d       = new Date(r.data.post_date + 'T00:00:00');
+        var dateStr = d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+
+        el.innerHTML =
+          '<img src="' + r.data.image_url + '" class="photo-img" alt="最新のことね" loading="lazy">' +
+          '<div class="photo-overlay">' +
+            '<span class="photo-date">' + dateStr + '</span>' +
+            '<span class="photo-comment">「' + esc(r.data.comment) + '」</span>' +
+          '</div>';
+
+      } catch (e) {
+        el.innerHTML = '<div class="dash-empty-photo">読み込みエラー</div>';
+      }
+    }
+
+    // 話し合いトピック
+    async function loadTopics() {
+      var el = document.getElementById('topicsContent');
+      try {
+        var r = await db
+          .from('topics')
+          .select('id, title, priority')
+          .eq('is_resolved', false)
+          .order('created_at', { ascending: false });
+
+        var data = (r.data || []).sort(function(a, b) {
+          if (a.priority === 'urgent' && b.priority !== 'urgent') return -1;
+          if (b.priority === 'urgent' && a.priority !== 'urgent') return 1;
+          return 0;
+        });
+
+        if (data.length === 0) {
+          el.innerHTML = '<p class="dash-empty">話し合い待ちはありません 👍</p>';
+          return;
+        }
+
+        var html = '<div class="topics-count">' + data.length + ' 件 話し合い待ち</div>';
+        data.slice(0, 4).forEach(function(t) {
+          html +=
+            '<div class="topic-row">' +
+              (t.priority === 'urgent'
+                ? '<span class="topic-dot urgent">🔥</span>'
+                : '<span class="topic-dot">·</span>') +
+              '<span class="topic-text">' + esc(t.title) + '</span>' +
+            '</div>';
+        });
+        if (data.length > 4) {
+          html += '<div class="topics-more">他 ' + (data.length - 4) + ' 件…</div>';
+        }
+        el.innerHTML = html;
+
+      } catch (e) {
+        el.innerHTML = '<p class="dash-empty">読み込みエラー</p>';
+      }
+    }
+
+    // 初期化
+    async function init() {
+      renderApps();
+      renderAge();
+
+      try {
+        var res = await fetch('config.json');
+        var cfg = await res.json();
+        var client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+        db = client;
+        await Promise.all([loadLatestPhoto(), loadTopics()]);
+      } catch (e) {
+        console.error('Dashboard init error:', e);
+        document.getElementById('photoContent').innerHTML  = '<div class="dash-empty-photo">接続エラー</div>';
+        document.getElementById('topicsContent').innerHTML = '<p class="dash-empty">接続エラー</p>';
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>

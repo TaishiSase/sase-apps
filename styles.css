@@ -175,6 +175,291 @@ body {
   transform: translateX(4px);
 }
 
+/* ===== ダッシュボード ===== */
+.dashboard {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 32px;
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ダッシュグリッド */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ダッシュカード 共通 */
+.dash-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: background 0.2s, transform 0.15s, border-color 0.2s;
+  animation: cardIn 0.5s cubic-bezier(0.34,1.2,0.64,1) both;
+}
+.dash-card:nth-child(1) { animation-delay: 0.25s; }
+.dash-card:nth-child(2) { animation-delay: 0.32s; }
+.dash-card:nth-child(3) { animation-delay: 0.38s; }
+.dash-card:nth-child(4) { animation-delay: 0.44s; }
+
+a.dash-card:hover {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.2);
+  transform: translateY(-2px);
+}
+a.dash-card:active {
+  transform: scale(0.97);
+}
+
+.dash-card-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+}
+
+/* 全幅カード */
+.card-photo,
+.card-topics {
+  grid-column: 1 / -1;
+}
+
+/* ===== 写真カード ===== */
+.card-photo {
+  padding: 0;
+  overflow: hidden;
+  min-height: 200px;
+  position: relative;
+}
+.card-photo .dash-card-label {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  z-index: 2;
+  margin-bottom: 0;
+  background: rgba(0,0,0,0.45);
+  padding: 3px 10px;
+  border-radius: 20px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.photo-content {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  position: relative;
+}
+.photo-skeleton {
+  width: 100%;
+  min-height: 200px;
+  border-radius: 20px;
+}
+.photo-img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+  border-radius: 20px;
+}
+.photo-overlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%);
+  padding: 24px 16px 16px;
+  border-radius: 0 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.photo-date {
+  font-size: 11px;
+  color: rgba(255,255,255,0.75);
+  font-weight: 300;
+}
+.photo-comment {
+  font-size: 13px;
+  color: #fff;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.dash-empty-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ===== 年齢カード ===== */
+.card-age {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.age-display {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.age-num {
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #A78BFA, #E879F9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+.age-unit {
+  font-size: 13px;
+  color: var(--muted);
+  margin-right: 4px;
+}
+.age-days {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 300;
+  margin-top: 6px;
+}
+.age-next {
+  font-size: 11px;
+  color: rgba(167,139,250,0.7);
+  margin-top: 2px;
+}
+
+/* ===== キャンプカード ===== */
+.card-camp {
+  display: flex;
+  flex-direction: column;
+}
+.camp-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0;
+}
+.camp-emoji {
+  font-size: 36px;
+  line-height: 1;
+}
+.camp-status {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.camp-hint {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 300;
+}
+
+/* ===== トピックカード ===== */
+.card-topics {
+  min-height: 80px;
+}
+.topics-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #F59E0B;
+  margin-bottom: 10px;
+}
+.topic-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.topic-row:last-of-type {
+  border-bottom: none;
+}
+.topic-dot {
+  flex-shrink: 0;
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+  color: var(--muted);
+}
+.topic-dot.urgent {
+  font-size: 14px;
+}
+.topic-text {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topics-more {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+  text-align: right;
+}
+.dash-empty {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ===== スケルトン ===== */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.dash-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.06) 25%,
+    rgba(255,255,255,0.12) 50%,
+    rgba(255,255,255,0.06) 75%
+  );
+  background-size: 800px 100%;
+  border-radius: 8px;
+  animation: shimmer 1.6s infinite linear;
+}
+.dash-skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+  width: 100%;
+}
+
 /* ===== フッター ===== */
 .footer {
   margin-top: 48px;
@@ -197,4 +482,19 @@ body {
   .card-icon { font-size: 34px; }
   .card-name { font-size: 17px; }
   .card-desc { font-size: 13px; }
+  .dashboard {
+    max-width: 560px;
+  }
+  .photo-img {
+    height: 260px;
+  }
+  .photo-skeleton {
+    min-height: 260px;
+  }
+  .photo-content {
+    min-height: 260px;
+  }
+  .card-photo {
+    min-height: 260px;
+  }
 }
