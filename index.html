@@ -78,6 +78,16 @@
           </div>
         </a>
 
+        <!-- 今週の予定（全幅） -->
+        <a href="https://fufu-yotei.vercel.app/" target="_blank" rel="noopener"
+           class="dash-card card-yotei" id="cardYotei">
+          <div class="dash-card-label">📅 今週の予定</div>
+          <div id="yoteiContent">
+            <div class="dash-skeleton dash-skeleton-line"></div>
+            <div class="dash-skeleton dash-skeleton-line" style="margin-top:8px;width:80%"></div>
+          </div>
+        </a>
+
       </div>
     </section>
 
@@ -112,6 +122,14 @@
         url:        'https://fami-camp.vercel.app/',
         color:      '#2D6A4F',
         colorLight: '#D1FAE5'
+      },
+      {
+        emoji:      '📅',
+        name:       '夫婦の共有予定帳',
+        desc:       'パパ・ママ・琴音の予定を一目で共有。月・週カレンダーで管理。',
+        url:        'https://fufu-yotei.vercel.app/',
+        color:      '#5BA3D0',
+        colorLight: '#DBEAFE'
       }
     ];
 
@@ -280,6 +298,76 @@
       }
     }
 
+    // 今週の予定
+    var YOTEI_MEMBERS = {
+      papa:   { label: 'パパ',  color: '#5BA3D0' },
+      mama:   { label: 'ママ',  color: '#E8748A' },
+      kotone: { label: '琴音',  color: '#67B899' },
+    };
+    var YOTEI_DAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+
+    function yoteiDateStr(d) {
+      var y = d.getFullYear();
+      var m = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    }
+
+    function yoteiFormatDate(s) {
+      var p = s.split('-');
+      var d = new Date(+p[0], +p[1] - 1, +p[2]);
+      return (d.getMonth() + 1) + '/' + d.getDate() + '（' + YOTEI_DAYS_JA[d.getDay()] + '）';
+    }
+
+    async function loadYotei() {
+      var el = document.getElementById('yoteiContent');
+      try {
+        var today = new Date();
+        var end   = new Date(today);
+        end.setDate(end.getDate() + 7);
+
+        var r = await db
+          .from('schedules')
+          .select('date, member, event_type, event_label, time_type, confirmed')
+          .gte('date', yoteiDateStr(today))
+          .lte('date', yoteiDateStr(end))
+          .order('date')
+          .order('created_at');
+
+        var data = r.data || [];
+        if (data.length === 0) {
+          el.innerHTML = '<p class="dash-empty">今週の予定はありません 📭</p>';
+          return;
+        }
+
+        var EMOJIS = {
+          '在宅': '🏠', '早朝出社': '🌅', '出社': '🏢', '遅晩出社': '🌙',
+          '出張': '✈️', '飲み会': '🍻', '保育園イベント': '🎒', 'custom': '✏️'
+        };
+
+        var html = '';
+        data.slice(0, 5).forEach(function (s) {
+          var m    = YOTEI_MEMBERS[s.member] || { label: s.member, color: '#999' };
+          var emoji = s.event_type === 'custom' ? '✏️' : (EMOJIS[s.event_type] || '📅');
+          var label = s.event_type === 'custom' ? (s.event_label || '自由記述') : s.event_type;
+          html +=
+            '<div class="yotei-row">' +
+              '<span class="yotei-dot" style="background:' + m.color + '"></span>' +
+              '<span class="yotei-date">' + yoteiFormatDate(s.date) + '</span>' +
+              '<span class="yotei-member" style="color:' + m.color + '">' + esc(m.label) + '</span>' +
+              '<span class="yotei-label">' + emoji + ' ' + esc(label) + '</span>' +
+              (s.confirmed ? '<span class="yotei-check">✓</span>' : '') +
+            '</div>';
+        });
+        if (data.length > 5) {
+          html += '<div class="topics-more">他 ' + (data.length - 5) + ' 件…</div>';
+        }
+        el.innerHTML = html;
+      } catch (e) {
+        el.innerHTML = '<p class="dash-empty">読み込みエラー</p>';
+      }
+    }
+
     // 初期化
     async function init() {
       renderApps();
@@ -290,11 +378,12 @@
         var cfg = await res.json();
         var client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
         db = client;
-        await Promise.all([loadLatestPhoto(), loadTopics(), loadNextCamp()]);
+        await Promise.all([loadLatestPhoto(), loadTopics(), loadNextCamp(), loadYotei()]);
       } catch (e) {
         console.error('Dashboard init error:', e);
         document.getElementById('photoContent').innerHTML  = '<div class="dash-empty-photo">接続エラー</div>';
         document.getElementById('topicsContent').innerHTML = '<p class="dash-empty">接続エラー</p>';
+        document.getElementById('yoteiContent').innerHTML  = '<p class="dash-empty">接続エラー</p>';
       }
     }
 
