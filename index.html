@@ -59,14 +59,14 @@
         </div>
 
         <!-- 次のキャンプ -->
-        <div class="dash-card card-camp">
+        <a href="https://fami-camp.vercel.app/" target="_blank" rel="noopener"
+           class="dash-card card-camp" id="cardCamp">
           <div class="dash-card-label">🏕️ 次のキャンプ</div>
-          <div class="camp-content">
-            <div class="camp-emoji">⛺</div>
-            <div class="camp-status">準備中</div>
-            <div class="camp-hint">アプリ実装予定</div>
+          <div id="campContent">
+            <div class="dash-skeleton dash-skeleton-line"></div>
+            <div class="dash-skeleton dash-skeleton-line" style="margin-top:8px;width:60%"></div>
           </div>
-        </div>
+        </a>
 
         <!-- 話し合いトピック（全幅） -->
         <a href="https://konya-hanaso.vercel.app/" target="_blank" rel="noopener"
@@ -199,6 +199,46 @@
       }
     }
 
+    // 次のキャンプ
+    async function loadNextCamp() {
+      var el = document.getElementById('campContent');
+      try {
+        var r = await db
+          .from('camps')
+          .select('title, campsite_name, start_date, end_date, camp_members(name)')
+          .eq('status', 'planned')
+          .order('start_date', { ascending: true, nullsFirst: false })
+          .limit(1)
+          .single();
+
+        if (r.error || !r.data) {
+          el.innerHTML = '<div class="camp-empty">⛺ 予定なし</div>';
+          return;
+        }
+
+        var c = r.data;
+        var dateStr = '';
+        if (c.start_date) {
+          var d = new Date(c.start_date + 'T00:00:00');
+          dateStr = d.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' });
+          if (c.end_date && c.end_date !== c.start_date) {
+            var d2 = new Date(c.end_date + 'T00:00:00');
+            dateStr += ' 〜 ' + d2.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
+          }
+        }
+        var members = (c.camp_members || []).map(function(m) { return m.name; }).join('・');
+
+        el.innerHTML =
+          '<div class="camp-next-title">' + esc(c.title) + '</div>' +
+          (c.campsite_name ? '<div class="camp-next-site">📍 ' + esc(c.campsite_name) + '</div>' : '') +
+          (dateStr ? '<div class="camp-next-date">📅 ' + dateStr + '</div>' : '') +
+          (members ? '<div class="camp-next-members">👥 ' + esc(members) + '</div>' : '');
+
+      } catch (e) {
+        el.innerHTML = '<div class="camp-empty">読み込みエラー</div>';
+      }
+    }
+
     // 話し合いトピック
     async function loadTopics() {
       var el = document.getElementById('topicsContent');
@@ -250,7 +290,7 @@
         var cfg = await res.json();
         var client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
         db = client;
-        await Promise.all([loadLatestPhoto(), loadTopics()]);
+        await Promise.all([loadLatestPhoto(), loadTopics(), loadNextCamp()]);
       } catch (e) {
         console.error('Dashboard init error:', e);
         document.getElementById('photoContent').innerHTML  = '<div class="dash-empty-photo">接続エラー</div>';
