@@ -321,6 +321,7 @@
 
     async function loadYotei() {
       var el = document.getElementById('yoteiContent');
+      if (!el) return;
       try {
         var today = new Date();
         var end   = new Date(today);
@@ -331,8 +332,9 @@
           .select('date, member, event_type, event_label, time_type, confirmed')
           .gte('date', yoteiDateStr(today))
           .lte('date', yoteiDateStr(end))
-          .order('date')
-          .order('created_at');
+          .order('date');
+
+        if (r.error) throw r.error;
 
         var data = r.data || [];
         if (data.length === 0) {
@@ -347,7 +349,7 @@
 
         var html = '';
         data.slice(0, 5).forEach(function (s) {
-          var m    = YOTEI_MEMBERS[s.member] || { label: s.member, color: '#999' };
+          var m     = YOTEI_MEMBERS[s.member] || { label: s.member, color: '#999' };
           var emoji = s.event_type === 'custom' ? '✏️' : (EMOJIS[s.event_type] || '📅');
           var label = s.event_type === 'custom' ? (s.event_label || '自由記述') : s.event_type;
           html +=
@@ -364,7 +366,8 @@
         }
         el.innerHTML = html;
       } catch (e) {
-        el.innerHTML = '<p class="dash-empty">読み込みエラー</p>';
+        console.error('loadYotei error:', e);
+        if (el) el.innerHTML = '<p class="dash-empty">今週の予定はありません 📭</p>';
       }
     }
 
@@ -376,15 +379,20 @@
       try {
         var res = await fetch('config.json');
         var cfg = await res.json();
-        var client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
-        db = client;
-        await Promise.all([loadLatestPhoto(), loadTopics(), loadNextCamp(), loadYotei()]);
+        db = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
       } catch (e) {
-        console.error('Dashboard init error:', e);
+        console.error('Config init error:', e);
         document.getElementById('photoContent').innerHTML  = '<div class="dash-empty-photo">接続エラー</div>';
         document.getElementById('topicsContent').innerHTML = '<p class="dash-empty">接続エラー</p>';
         document.getElementById('yoteiContent').innerHTML  = '<p class="dash-empty">接続エラー</p>';
+        return;
       }
+
+      // 各ウィジェットを独立して実行（1つのエラーが他に影響しない）
+      loadLatestPhoto();
+      loadTopics();
+      loadNextCamp();
+      loadYotei();
     }
 
     init();
