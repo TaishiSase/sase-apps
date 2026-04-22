@@ -57,16 +57,15 @@
           </div>
         </a>
 
-        <!-- ことねの成長 -->
-        <div class="dash-card card-age">
-          <div class="dash-card-label">🍀 ことねの成長</div>
-          <div class="age-display" id="ageDisplay">
-            <span class="age-num" id="ageYears">-</span><span class="age-unit">歳</span>
-            <span class="age-num" id="ageMonths">-</span><span class="age-unit">ヶ月</span>
+        <!-- 前回のキャンプ -->
+        <a href="https://fami-camp.vercel.app/" target="_blank" rel="noopener"
+           class="dash-card card-last-camp" id="cardLastCamp">
+          <div class="dash-card-label">🏕️ 前回のキャンプ</div>
+          <div id="campLastContent">
+            <div class="dash-skeleton dash-skeleton-line"></div>
+            <div class="dash-skeleton dash-skeleton-line" style="margin-top:8px;width:70%"></div>
           </div>
-          <div class="age-days" id="ageDays">計算中…</div>
-          <div class="age-next" id="ageNext"></div>
-        </div>
+        </a>
 
         <!-- 次のキャンプ -->
         <a href="https://fami-camp.vercel.app/" target="_blank" rel="noopener"
@@ -78,7 +77,18 @@
           </div>
         </a>
 
-        <!-- 話し合いトピック（全幅） -->
+        <!-- ことねの成長 -->
+        <div class="dash-card card-age">
+          <div class="dash-card-label">🍀 ことねの成長</div>
+          <div class="age-display" id="ageDisplay">
+            <span class="age-num" id="ageYears">-</span><span class="age-unit">歳</span>
+            <span class="age-num" id="ageMonths">-</span><span class="age-unit">ヶ月</span>
+          </div>
+          <div class="age-days" id="ageDays">計算中…</div>
+          <div class="age-next" id="ageNext"></div>
+        </div>
+
+        <!-- 話し合いトピック -->
         <a href="https://konya-hanaso.vercel.app/" target="_blank" rel="noopener"
            class="dash-card card-topics" id="cardTopics">
           <div class="dash-card-label">💬 話し合いたいこと</div>
@@ -257,6 +267,47 @@
       }
     }
 
+    // 前回のキャンプ
+    async function loadLastCamp() {
+      var el = document.getElementById('campLastContent');
+      try {
+        var r = await db
+          .from('camps')
+          .select('title, campsite_name, start_date, end_date, rating')
+          .eq('status', 'completed')
+          .order('start_date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (r.error || !r.data) {
+          el.innerHTML = '<div class="camp-empty">まだ記録がありません</div>';
+          return;
+        }
+
+        var c = r.data;
+        var dateStr = '';
+        if (c.start_date) {
+          var d = new Date(c.start_date + 'T00:00:00');
+          dateStr = d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+          if (c.end_date && c.end_date !== c.start_date) {
+            var d2 = new Date(c.end_date + 'T00:00:00');
+            var nights = Math.round((new Date(c.end_date) - new Date(c.start_date)) / 86400000);
+            dateStr += '（' + nights + '泊）';
+          }
+        }
+        var stars = c.rating ? '⭐'.repeat(c.rating) : '';
+
+        el.innerHTML =
+          '<div class="camp-last-title">' + esc(c.title) + '</div>' +
+          (c.campsite_name ? '<div class="camp-last-meta">📍 ' + esc(c.campsite_name) + '</div>' : '') +
+          (dateStr ? '<div class="camp-last-meta">📅 ' + dateStr + '</div>' : '') +
+          (stars ? '<div class="camp-last-stars">' + stars + '</div>' : '');
+
+      } catch (e) {
+        el.innerHTML = '<div class="camp-empty">読み込みエラー</div>';
+      }
+    }
+
     // 話し合いトピック
     async function loadTopics() {
       var el = document.getElementById('topicsContent');
@@ -329,7 +380,7 @@
 
         var r = await db
           .from('schedules')
-          .select('date, member, event_type, event_label, time_type, confirmed')
+          .select('date, date_end, member, event_type, event_label, time_type, confirmed, return_time, needs_dinner')
           .gte('date', yoteiDateStr(today))
           .lte('date', yoteiDateStr(end))
           .order('date');
@@ -352,13 +403,23 @@
           var m     = YOTEI_MEMBERS[s.member] || { label: s.member, color: '#999' };
           var emoji = s.event_type === 'custom' ? '✏️' : (EMOJIS[s.event_type] || '📅');
           var label = s.event_type === 'custom' ? (s.event_label || '自由記述') : s.event_type;
+          var subParts = [];
+          if (s.return_time) {
+            subParts.push('<span class="yotei-return">🕐 ' + s.return_time.slice(0, 5) + '</span>');
+          }
+          if (s.needs_dinner === true) {
+            subParts.push('<span class="yotei-dinner">🍚 晩飯いる</span>');
+          } else if (s.needs_dinner === false) {
+            subParts.push('<span class="yotei-no-dinner">🙅 晩飯いらない</span>');
+          }
           html +=
             '<div class="yotei-row">' +
               '<span class="yotei-dot" style="background:' + m.color + '"></span>' +
-              '<span class="yotei-date">' + yoteiFormatDate(s.date) + '</span>' +
+              '<span class="yotei-date">' + yoteiFormatDate(s.date) + (s.date_end && s.date_end !== s.date ? '〜' + yoteiFormatDate(s.date_end) : '') + '</span>' +
               '<span class="yotei-member" style="color:' + m.color + '">' + esc(m.label) + '</span>' +
               '<span class="yotei-label">' + emoji + ' ' + esc(label) + '</span>' +
               (s.confirmed ? '<span class="yotei-check">✓</span>' : '') +
+              (subParts.length ? '<div class="yotei-sub">' + subParts.join('') + '</div>' : '') +
             '</div>';
         });
         if (data.length > 5) {
@@ -392,6 +453,7 @@
       loadLatestPhoto();
       loadTopics();
       loadNextCamp();
+      loadLastCamp();
       loadYotei();
     }
 
