@@ -156,17 +156,14 @@ h1 {
 }
 
 .consult-workbench {
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  grid-template-columns: 1fr;
 }
 
 .consult-workbench .ask-panel,
-.consult-workbench .log-panel {
-  grid-column: 1;
-}
-
+.consult-workbench .log-panel,
 .consult-workbench .results,
 .consult-workbench .reflection-panel {
-  grid-column: 2;
+  grid-column: 1 / -1;
 }
 
 .planner-workbench {
