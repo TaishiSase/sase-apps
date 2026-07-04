@@ -104,16 +104,26 @@ h1 {
   margin: 16px 0 0;
 }
 
-.dashboard,
-.lower-grid {
+.workbench {
   display: grid;
   grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
   gap: 16px;
   align-items: start;
 }
 
-.lower-grid {
-  margin-top: 16px;
+.profile-panel {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+}
+
+.ask-panel,
+.results,
+.reflection-panel {
+  grid-column: 2;
+}
+
+.log-panel {
+  grid-column: 1;
 }
 
 .panel {
@@ -321,7 +331,10 @@ textarea:focus {
 .results {
   display: grid;
   gap: 12px;
-  margin-top: 16px;
+}
+
+.results:empty {
+  display: none;
 }
 
 .summary-card,
@@ -499,10 +512,18 @@ textarea:focus {
 }
 
 @media (max-width: 820px) {
-  .dashboard,
-  .lower-grid,
+  .workbench,
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .profile-panel,
+  .ask-panel,
+  .results,
+  .log-panel,
+  .reflection-panel {
+    grid-column: auto;
+    grid-row: auto;
   }
 }
 
