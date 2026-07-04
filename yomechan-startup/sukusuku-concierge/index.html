@@ -33,6 +33,10 @@
         <span class="status-pill" id="syncStatus">ローカル保存</span>
       </div>
       <form id="authForm" class="auth-form">
+        <div class="auth-tabs" role="tablist" aria-label="同期方法">
+          <button type="button" class="auth-tab active" data-auth-mode="login">ログイン</button>
+          <button type="button" class="auth-tab" data-auth-mode="signup">新規登録</button>
+        </div>
         <label>
           <span>メール</span>
           <input name="email" type="email" autocomplete="email" placeholder="taish.dengel@gmail.com">
@@ -41,13 +45,92 @@
           <span>パスワード</span>
           <input name="password" type="password" autocomplete="current-password" placeholder="Supabase Authのパスワード">
         </label>
-        <button class="secondary-btn" type="submit">ログインして同期</button>
+        <div class="signup-fields hidden" id="signupFields">
+          <label>
+            <span>家族名</span>
+            <input name="familyName" type="text" placeholder="佐瀬家">
+          </label>
+          <label>
+            <span>あなたの役割</span>
+            <select name="relation">
+              <option value="papa">パパ</option>
+              <option value="mama">ママ</option>
+              <option value="grandparent">祖父母</option>
+              <option value="sibling">兄弟姉妹</option>
+              <option value="relative">その他親族</option>
+            </select>
+          </label>
+        </div>
+        <button class="secondary-btn" type="submit" id="authSubmit">ログインして同期</button>
       </form>
       <div class="auth-session hidden" id="authSession">
         <p id="authStatus">ログイン中</p>
         <button class="secondary-btn" type="button" id="authLogout">ログアウト</button>
       </div>
       <p class="auth-note">ログインすると、プロフィール、AI相談、提案、実施記録をSupabaseに保存します。</p>
+      <div class="sync-guide">
+        <div><strong>1</strong><span>初めての家族は「新規登録」で家庭IDを作成</span></div>
+        <div><strong>2</strong><span>パパ/ママが家族設定から招待コードを発行</span></div>
+        <div><strong>3</strong><span>招待された人は同じメールで登録後、コードで参加</span></div>
+      </div>
+    </section>
+
+    <section class="panel family-panel hidden" id="familyPanel">
+      <div class="panel-head">
+        <div>
+          <p class="section-kicker">family settings</p>
+          <h2>家族設定</h2>
+        </div>
+        <span class="status-pill" id="familyRoleStatus">未設定</span>
+      </div>
+      <div class="family-summary">
+        <div class="family-illustration" aria-hidden="true">
+          <span>🏠</span><span>🌱</span><span>📚</span>
+        </div>
+        <p id="familySummaryText">ログインすると家庭IDと権限を確認できます。</p>
+      </div>
+      <div class="family-actions">
+        <button class="primary-btn" type="button" id="createFamilyButton">このアカウントで家族を作る</button>
+      </div>
+      <form id="joinFamilyForm" class="family-form">
+        <h3>招待コードで参加</h3>
+        <p>家族から共有されたコードを入れると、その家庭IDに参加できます。</p>
+        <label>
+          <span>招待コード</span>
+          <input name="inviteToken" type="text" placeholder="例: ABC123" autocomplete="off">
+        </label>
+        <button class="secondary-btn" type="submit">家族に参加する</button>
+      </form>
+      <form id="inviteFamilyForm" class="family-form hidden">
+        <h3>家族を招待</h3>
+        <p>パパ/ママは編集可能、祖父母・兄弟姉妹・親族は閲覧のみで招待できます。</p>
+        <label>
+          <span>招待するメール</span>
+          <input name="inviteEmail" type="email" placeholder="family@example.com">
+        </label>
+        <div class="choice-row">
+          <label>
+            <span>権限</span>
+            <select name="inviteRole">
+              <option value="parent">編集可能</option>
+              <option value="viewer">閲覧のみ</option>
+            </select>
+          </label>
+          <label>
+            <span>続柄</span>
+            <select name="inviteRelation">
+              <option value="mama">ママ</option>
+              <option value="papa">パパ</option>
+              <option value="grandparent">祖父母</option>
+              <option value="sibling">兄弟姉妹</option>
+              <option value="relative">その他親族</option>
+              <option value="other">その他</option>
+            </select>
+          </label>
+        </div>
+        <button class="primary-btn" type="submit">招待コードを作る</button>
+        <div id="inviteResult" class="invite-result hidden"></div>
+      </form>
     </section>
 
     <section class="workbench">
@@ -61,6 +144,13 @@
         </div>
 
         <form id="profileForm" class="form-grid">
+          <div class="photo-uploader">
+            <div class="child-photo" id="childPhotoPreview">🌱</div>
+            <label class="photo-input">
+              <span>顔写真</span>
+              <input name="photo" id="photoInput" type="file" accept="image/*">
+            </label>
+          </div>
           <label>
             <span>名前</span>
             <input name="name" type="text" placeholder="ことちゃん" autocomplete="off" required>

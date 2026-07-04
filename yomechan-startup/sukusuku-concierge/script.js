@@ -37,8 +37,19 @@ const authForm = document.getElementById("authForm");
 const authSession = document.getElementById("authSession");
 const authStatus = document.getElementById("authStatus");
 const authLogout = document.getElementById("authLogout");
+const authSubmit = document.getElementById("authSubmit");
+const signupFields = document.getElementById("signupFields");
 const syncStatus = document.getElementById("syncStatus");
+const familyPanel = document.getElementById("familyPanel");
+const familyRoleStatus = document.getElementById("familyRoleStatus");
+const familySummaryText = document.getElementById("familySummaryText");
+const createFamilyButton = document.getElementById("createFamilyButton");
+const joinFamilyForm = document.getElementById("joinFamilyForm");
+const inviteFamilyForm = document.getElementById("inviteFamilyForm");
+const inviteResult = document.getElementById("inviteResult");
 const profileForm = document.getElementById("profileForm");
+const photoInput = document.getElementById("photoInput");
+const childPhotoPreview = document.getElementById("childPhotoPreview");
 const askForm = document.getElementById("askForm");
 const logForm = document.getElementById("logForm");
 const resultsSection = document.getElementById("resultsSection");
@@ -49,6 +60,8 @@ const askButton = document.getElementById("askButton");
 const logEmpty = document.getElementById("logEmpty");
 const logHistory = document.getElementById("logHistory");
 const selectedSuggestionTitle = document.getElementById("selectedSuggestionTitle");
+
+let authMode = "login";
 
 function loadState() {
   try {
@@ -75,6 +88,69 @@ function esc(value) {
 function setSyncStatus(text, mode = "local") {
   syncStatus.textContent = text;
   syncStatus.dataset.mode = mode;
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  authForm.querySelectorAll("[data-auth-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.authMode === mode);
+  });
+  signupFields.classList.toggle("hidden", mode !== "signup");
+  authSubmit.textContent = mode === "signup" ? "新規登録して家族を作る" : "ログインして同期";
+}
+
+function roleLabel(role) {
+  return role === "parent" ? "編集可能" : "閲覧のみ";
+}
+
+function relationLabel(relation) {
+  return {
+    papa: "パパ",
+    mama: "ママ",
+    grandparent: "祖父母",
+    sibling: "兄弟姉妹",
+    relative: "その他親族",
+    other: "その他"
+  }[relation] || "家族";
+}
+
+function makeInviteToken() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(6);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
+}
+
+function renderProfilePhoto() {
+  const photoData = state.profile?.photoData;
+  if (photoData) {
+    childPhotoPreview.innerHTML = `<img src="${esc(photoData)}" alt="子どもの顔写真">`;
+  } else {
+    childPhotoPreview.textContent = "🌱";
+  }
+}
+
+function readCompressedImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("写真を読み込めませんでした。"));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error("写真を読み込めませんでした。"));
+      image.onload = () => {
+        const maxSize = 480;
+        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.78));
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function getAgeText(birthDate) {
@@ -108,6 +184,7 @@ function fillProfileForm() {
       profileForm.elements[key].value = value || "";
     }
   });
+  renderProfilePhoto();
   updateProfileStatus();
 }
 
@@ -172,6 +249,7 @@ async function refreshAuthState() {
   if (!currentUser) {
     authForm.classList.remove("hidden");
     authSession.classList.add("hidden");
+    familyPanel.classList.add("hidden");
     setSyncStatus("ローカル保存", "local");
     return;
   }
@@ -181,12 +259,17 @@ async function refreshAuthState() {
   authStatus.textContent = `${currentUser.email} で同期中`;
   setSyncStatus("同期中", "online");
 
-  await loadOrCreateFamily();
+  await loadFamilyMembership();
+  renderFamilyPanel();
+  if (!activeFamily) {
+    setSyncStatus("家族未設定", "local");
+    return;
+  }
   await loadFirstChild();
   await loadRecentLogs();
 }
 
-async function loadOrCreateFamily() {
+async function loadFamilyMembership() {
   const memberResult = await db
     .from("family_members")
     .select("id, family_id, role, relation, display_name, families(id, name)")
@@ -203,9 +286,16 @@ async function loadOrCreateFamily() {
     return;
   }
 
+  activeMember = null;
+  activeFamily = null;
+}
+
+async function createFamily(name = "佐瀬家", relation = "papa") {
+  if (!db || !currentUser) return;
+
   const familyResult = await db
     .from("families")
-    .insert({ name: "佐瀬家", created_by: currentUser.id })
+    .insert({ name, created_by: currentUser.id })
     .select("id, name")
     .single();
 
@@ -219,7 +309,7 @@ async function loadOrCreateFamily() {
       user_id: currentUser.id,
       display_name: currentUser.email || "parent",
       role: "parent",
-      relation: "papa",
+      relation,
       status: "active"
     })
     .select("id, family_id, role, relation, display_name")
@@ -227,6 +317,118 @@ async function loadOrCreateFamily() {
 
   if (memberInsert.error) throw memberInsert.error;
   activeMember = memberInsert.data;
+  renderFamilyPanel();
+}
+
+function renderFamilyPanel() {
+  if (!currentUser) {
+    familyPanel.classList.add("hidden");
+    return;
+  }
+
+  familyPanel.classList.remove("hidden");
+  const isParent = activeMember?.role === "parent";
+  createFamilyButton.classList.toggle("hidden", Boolean(activeFamily));
+  inviteFamilyForm.classList.toggle("hidden", !activeFamily || !isParent);
+  joinFamilyForm.classList.toggle("hidden", Boolean(activeFamily));
+
+  if (!activeFamily) {
+    familyRoleStatus.textContent = "家族未設定";
+    familySummaryText.textContent = "新しく家庭IDを作るか、家族から共有された招待コードで参加してください。";
+    updateEditAccess();
+    return;
+  }
+
+  familyRoleStatus.textContent = `${relationLabel(activeMember?.relation)} / ${roleLabel(activeMember?.role)}`;
+  familySummaryText.textContent = `${activeFamily.name || "家族"} に同期中です。家庭IDは ${activeFamily.id.slice(0, 8)}... です。`;
+  updateEditAccess();
+}
+
+function updateEditAccess() {
+  const canEdit = !activeFamily || activeMember?.role === "parent";
+  profileForm.querySelectorAll("input, select, textarea, button").forEach((element) => {
+    element.disabled = !canEdit;
+  });
+  askForm.querySelectorAll("input, select, textarea, button").forEach((element) => {
+    element.disabled = !canEdit;
+  });
+  logForm.querySelectorAll("input, select, textarea, button").forEach((element) => {
+    element.disabled = !canEdit;
+  });
+  if (!canEdit) {
+    askButton.textContent = "閲覧のみ";
+  } else if (!askButton.disabled) {
+    askButton.textContent = "提案してもらう";
+  }
+}
+
+async function createInvitation(formData) {
+  if (!db || !activeFamily || activeMember?.role !== "parent") {
+    throw new Error("招待コードを作れるのはパパ/ママ権限の家族だけです。");
+  }
+
+  const token = makeInviteToken();
+  const email = String(formData.get("inviteEmail") || "").trim().toLowerCase();
+  const role = formData.get("inviteRole");
+  const relation = formData.get("inviteRelation");
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
+  if (!email) throw new Error("招待するメールを入力してください。");
+
+  const result = await db.from("invitations").insert({
+    family_id: activeFamily.id,
+    email,
+    role,
+    relation,
+    token,
+    expires_at: expiresAt
+  }).select("token, email, role, relation, expires_at").single();
+
+  if (result.error) throw result.error;
+  return result.data;
+}
+
+async function joinFamilyByToken(token) {
+  if (!db || !currentUser) throw new Error("先にログインまたは新規登録してください。");
+  const normalizedToken = String(token || "").trim().toUpperCase();
+  if (!normalizedToken) throw new Error("招待コードを入力してください。");
+
+  const inviteResult = await db
+    .from("invitations")
+    .select("id, family_id, email, role, relation, token, status")
+    .eq("token", normalizedToken)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (inviteResult.error) throw inviteResult.error;
+  if (!inviteResult.data) {
+    throw new Error("招待コードが見つからないか、ログイン中のメールと一致していません。");
+  }
+
+  const invite = inviteResult.data;
+  const memberResult = await db.from("family_members").insert({
+    family_id: invite.family_id,
+    user_id: currentUser.id,
+    display_name: currentUser.email || "family",
+    role: invite.role,
+    relation: invite.relation,
+    status: "active"
+  });
+  if (memberResult.error && memberResult.error.code !== "23505") throw memberResult.error;
+
+  const updateResult = await db
+    .from("invitations")
+    .update({
+      status: "accepted",
+      accepted_by: currentUser.id,
+      accepted_at: new Date().toISOString()
+    })
+    .eq("id", invite.id);
+  if (updateResult.error) throw updateResult.error;
+
+  await loadFamilyMembership();
+  renderFamilyPanel();
+  await loadFirstChild();
+  await loadRecentLogs();
 }
 
 async function loadFirstChild() {
@@ -246,7 +448,7 @@ async function loadFirstChild() {
 
   const profileResult = await db
     .from("child_profiles")
-    .select("id, likes, concerns, parent_goals")
+    .select("id, likes, concerns, parent_goals, photo_data")
     .eq("child_id", activeChild.id)
     .maybeSingle();
 
@@ -259,7 +461,8 @@ async function loadFirstChild() {
     gender: activeChild.gender || "",
     likes: profileResult.data?.likes || "",
     concerns: profileResult.data?.concerns || "",
-    goals: profileResult.data?.parent_goals || ""
+    goals: profileResult.data?.parent_goals || "",
+    photoData: profileResult.data?.photo_data || ""
   };
   saveState();
   fillProfileForm();
@@ -302,6 +505,7 @@ async function saveProfileToSupabase(profile) {
     likes: profile.likes || null,
     concerns: profile.concerns || null,
     parent_goals: profile.goals || null,
+    photo_data: profile.photoData || null,
     updated_at: new Date().toISOString()
   };
 
@@ -614,22 +818,51 @@ function renderReflection() {
   `;
 }
 
+authForm.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-auth-mode]");
+  if (button) setAuthMode(button.dataset.authMode);
+});
+
 authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!db) return;
   const formData = new FormData(authForm);
-  setSyncStatus("ログイン中...", "online");
-  const result = await db.auth.signInWithPassword({
-    email: formData.get("email"),
-    password: formData.get("password")
-  });
-  if (result.error) {
-    setSyncStatus("ログイン失敗", "local");
-    alert(result.error.message);
+  const email = String(formData.get("email") || "").trim();
+  const password = String(formData.get("password") || "");
+  if (!email || !password) {
+    alert("メールとパスワードを入力してください。");
     return;
   }
-  session = result.data.session;
-  currentUser = session.user;
+
+  setSyncStatus(authMode === "signup" ? "登録中..." : "ログイン中...", "online");
+
+  if (authMode === "signup") {
+    const result = await db.auth.signUp({ email, password });
+    if (result.error) {
+      setSyncStatus("登録失敗", "local");
+      alert(result.error.message);
+      return;
+    }
+    session = result.data.session;
+    currentUser = result.data.user || session?.user || null;
+    if (!session) {
+      setSyncStatus("メール確認待ち", "local");
+      alert("確認メールが必要な設定です。メール確認後にログインしてください。");
+      return;
+    }
+    await createFamily(formData.get("familyName") || "佐瀬家", formData.get("relation") || "papa");
+    setAuthMode("login");
+  } else {
+    const result = await db.auth.signInWithPassword({ email, password });
+    if (result.error) {
+      setSyncStatus("ログイン失敗", "local");
+      alert(result.error.message);
+      return;
+    }
+    session = result.data.session;
+    currentUser = session.user;
+  }
+
   await refreshAuthState();
 });
 
@@ -640,14 +873,60 @@ authLogout.addEventListener("click", async () => {
   activeFamily = null;
   activeMember = null;
   activeChild = null;
+  activeProfileId = null;
   await refreshAuthState();
+});
+
+createFamilyButton.addEventListener("click", async () => {
+  try {
+    await createFamily("佐瀬家", "papa");
+    setSyncStatus("同期済み", "online");
+    await refreshAuthState();
+  } catch (error) {
+    console.error(error);
+    alert(`家族作成に失敗しました: ${error.message}`);
+  }
+});
+
+joinFamilyForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(joinFamilyForm);
+  try {
+    await joinFamilyByToken(formData.get("inviteToken"));
+    joinFamilyForm.reset();
+    setSyncStatus("同期済み", "online");
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  }
+});
+
+inviteFamilyForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(inviteFamilyForm);
+  try {
+    const invite = await createInvitation(formData);
+    inviteResult.classList.remove("hidden");
+    inviteResult.innerHTML = `
+      <strong>招待コード: ${esc(invite.token)}</strong>
+      <p>${esc(invite.email)} に共有してください。同じメールで登録/ログイン後、このコードを入力すると参加できます。</p>
+    `;
+    inviteFamilyForm.reset();
+  } catch (error) {
+    console.error(error);
+    alert(`招待コード作成に失敗しました: ${error.message}`);
+  }
 });
 
 profileForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(profileForm);
-  state.profile = Object.fromEntries(formData.entries());
+  const nextProfile = Object.fromEntries(formData.entries());
+  delete nextProfile.photo;
+  nextProfile.photoData = state.profile?.photoData || "";
+  state.profile = nextProfile;
   saveState();
+  renderProfilePhoto();
   updateProfileStatus();
   try {
     await saveProfileToSupabase(state.profile);
@@ -655,6 +934,21 @@ profileForm.addEventListener("submit", async (event) => {
     console.error(error);
     setSyncStatus("ローカル保存", "local");
     alert(`Supabase保存に失敗しました: ${error.message}`);
+  }
+});
+
+photoInput.addEventListener("change", async () => {
+  const file = photoInput.files?.[0];
+  if (!file) return;
+  try {
+    state.profile = state.profile || {};
+    state.profile.photoData = await readCompressedImage(file);
+    saveState();
+    renderProfilePhoto();
+    setSyncStatus("プロフィール未保存", "local");
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
   }
 });
 

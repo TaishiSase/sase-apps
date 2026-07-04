@@ -44,6 +44,7 @@ create table if not exists public.child_profiles (
   parent_goals text,
   family_policy text,
   lifestyle_notes text,
+  photo_data text,
   updated_at timestamptz not null default now(),
   unique (child_id)
 );
@@ -110,6 +111,8 @@ create table if not exists public.invitations (
   status text not null default 'pending' check (status in ('pending', 'accepted', 'expired')),
   token text not null unique,
   expires_at timestamptz not null,
+  accepted_by uuid references auth.users(id) on delete set null,
+  accepted_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -124,6 +127,12 @@ create table if not exists public.ai_usage_logs (
   estimated_cost numeric,
   created_at timestamptz not null default now()
 );
+
+create index if not exists invitations_token_status_idx
+  on public.invitations(token, status, expires_at);
+
+create index if not exists invitations_email_status_idx
+  on public.invitations(lower(email), status, expires_at);
 
 alter table public.families enable row level security;
 alter table public.family_members enable row level security;
@@ -207,6 +216,22 @@ create policy "family_members_insert_parent" on public.family_members
         where f.id = family_members.family_id
           and f.created_by = (select auth.uid())
       )
+    )
+  );
+
+create policy "family_members_insert_invited_self" on public.family_members
+  for insert to authenticated
+  with check (
+    user_id = (select auth.uid())
+    and exists (
+      select 1
+      from public.invitations i
+      where i.family_id = family_members.family_id
+        and lower(i.email) = lower(coalesce((auth.jwt() ->> 'email'), ''))
+        and i.role = family_members.role
+        and i.relation = family_members.relation
+        and i.status in ('pending', 'accepted')
+        and i.expires_at > now()
     )
   );
 
@@ -309,10 +334,31 @@ create policy "invitations_select_parent" on public.invitations
   for select to authenticated
   using (private.is_family_parent(family_id));
 
+create policy "invitations_select_invitee" on public.invitations
+  for select to authenticated
+  using (
+    status = 'pending'
+    and expires_at > now()
+    and lower(email) = lower(coalesce((auth.jwt() ->> 'email'), ''))
+  );
+
 create policy "invitations_write_parent" on public.invitations
   for all to authenticated
   using (private.is_family_parent(family_id))
   with check (private.is_family_parent(family_id));
+
+create policy "invitations_update_invitee" on public.invitations
+  for update to authenticated
+  using (
+    status = 'pending'
+    and expires_at > now()
+    and lower(email) = lower(coalesce((auth.jwt() ->> 'email'), ''))
+  )
+  with check (
+    status = 'accepted'
+    and accepted_by = (select auth.uid())
+    and lower(email) = lower(coalesce((auth.jwt() ->> 'email'), ''))
+  );
 
 create policy "ai_usage_logs_select_parent" on public.ai_usage_logs
   for select to authenticated

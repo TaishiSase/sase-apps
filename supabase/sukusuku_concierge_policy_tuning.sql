@@ -14,8 +14,27 @@ create index if not exists idx_activity_logs_user_id on public.activity_logs(use
 create index if not exists idx_weekly_plans_family_id on public.weekly_plans(family_id);
 create index if not exists idx_weekly_plans_created_by on public.weekly_plans(created_by);
 create index if not exists idx_invitations_family_id on public.invitations(family_id);
+create index if not exists invitations_token_status_idx on public.invitations(token, status, expires_at);
+create index if not exists invitations_email_status_idx on public.invitations(lower(email), status, expires_at);
 create index if not exists idx_ai_usage_logs_family_id on public.ai_usage_logs(family_id);
 create index if not exists idx_ai_usage_logs_user_id on public.ai_usage_logs(user_id);
+
+drop policy if exists "family_members_insert_invited_self" on public.family_members;
+create policy "family_members_insert_invited_self" on public.family_members
+  for insert to authenticated
+  with check (
+    user_id = (select auth.uid())
+    and exists (
+      select 1
+      from public.invitations i
+      where i.family_id = family_members.family_id
+        and lower(i.email) = lower(coalesce((auth.jwt() ->> 'email'), ''))
+        and i.role = family_members.role
+        and i.relation = family_members.relation
+        and i.status in ('pending', 'accepted')
+        and i.expires_at > now()
+    )
+  );
 
 drop policy if exists "children_write_parent" on public.children;
 create policy "children_insert_parent" on public.children
@@ -138,13 +157,34 @@ create policy "weekly_plans_delete_parent" on public.weekly_plans
   using (private.is_family_parent(family_id));
 
 drop policy if exists "invitations_write_parent" on public.invitations;
+drop policy if exists "invitations_select_invitee" on public.invitations;
+drop policy if exists "invitations_update_invitee" on public.invitations;
 create policy "invitations_insert_parent" on public.invitations
   for insert to authenticated
   with check (private.is_family_parent(family_id));
+create policy "invitations_select_invitee" on public.invitations
+  for select to authenticated
+  using (
+    status = 'pending'
+    and expires_at > now()
+    and lower(email) = lower(coalesce((auth.jwt() ->> 'email'), ''))
+  );
 create policy "invitations_update_parent" on public.invitations
   for update to authenticated
   using (private.is_family_parent(family_id))
   with check (private.is_family_parent(family_id));
+create policy "invitations_update_invitee" on public.invitations
+  for update to authenticated
+  using (
+    status = 'pending'
+    and expires_at > now()
+    and lower(email) = lower(coalesce((auth.jwt() ->> 'email'), ''))
+  )
+  with check (
+    status = 'accepted'
+    and accepted_by = (select auth.uid())
+    and lower(email) = lower(coalesce((auth.jwt() ->> 'email'), ''))
+  );
 create policy "invitations_delete_parent" on public.invitations
   for delete to authenticated
   using (private.is_family_parent(family_id));
