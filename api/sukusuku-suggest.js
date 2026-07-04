@@ -41,7 +41,8 @@ function buildInstructions() {
     "親を責めず、子どもを採点せず、いいところを伸ばし、次に育てたい力を補う表現にしてください。",
     "エビデンスは論文風に長くせず、保護者が納得できる短い背景として書いてください。根拠が強い一般原則と、個別の推測を分けてください。",
     "必ずJSONだけを返してください。Markdownや説明文は不要です。",
-    "JSON形式: {\"summary\":\"短い総括\",\"suggestions\":[{\"type\":\"quick|creative|deep\",\"title\":\"\",\"aim\":\"\",\"materials\":\"\",\"steps\":[\"\"],\"phrases\":[\"\"],\"skills\":[\"\"],\"evidence\":\"発達・教育上の背景を80字程度で\",\"observe\":\"親が見るポイントを1つ\",\"consult\":\"心配が続く場合の相談目安を柔らかく\",\"fallback\":\"\"}]}",
+    "evidenceTagは必ず次のいずれかにしてください: \"Harvard型: 応答的な関わり\", \"NAEYC型: 発達に合った遊び\", \"CDC型: 観察と相談目安\"。",
+    "JSON形式: {\"summary\":\"短い総括\",\"suggestions\":[{\"type\":\"quick|creative|deep\",\"title\":\"\",\"aim\":\"\",\"materials\":\"\",\"steps\":[\"\"],\"phrases\":[\"\"],\"skills\":[\"\"],\"evidenceTag\":\"Harvard型: 応答的な関わり\",\"evidence\":\"発達・教育上の背景を80字程度で\",\"observe\":\"親が見るポイントを1つ\",\"consult\":\"心配が続く場合の相談目安を柔らかく\",\"fallback\":\"\"}]}",
     "suggestionsは必ず3件で、quick, creative, deepを1件ずつ含めてください。"
   ].join("\n");
 }

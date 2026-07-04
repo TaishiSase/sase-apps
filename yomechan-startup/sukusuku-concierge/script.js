@@ -580,6 +580,7 @@ async function saveSuggestionsToSupabase(payload, data) {
     steps: row.steps || [],
     phrases: row.phrases || [],
     skills: row.skills || [],
+    evidenceTag: row.raw_response?.evidenceTag || "",
     evidence: row.raw_response?.evidence || "",
     observe: row.raw_response?.observe || "",
     consult: row.raw_response?.consult || "",
@@ -602,6 +603,7 @@ function fallbackSuggestions(payload) {
         steps: ["好きなものを1つ選ぶ", "名前や色を一緒に言う", "できたところを短くほめる"],
         phrases: ["それいいね、どうして選んだの？", "もう一回やってみる？"],
         skills: ["会話", "観察", "自己肯定感"],
+        evidenceTag: "Harvard型: 応答的な関わり",
         evidence: "応答的なやりとりは、言葉と社会性の土台を育てるとされています。",
         observe: "子どもが自分から見せる、指さす、もう一度求める反応を見る。",
         consult: "言葉や反応の少なさが長く気になる時は、健診や小児科で相談を。",
@@ -616,6 +618,7 @@ function fallbackSuggestions(payload) {
         steps: ["丸いものを探す", "柔らかいものを探す", "見つけたものを親に紹介する"],
         phrases: ["どこが丸いと思った？", "これはどんな触り心地？"],
         skills: ["運動", "語彙", "分類"],
+        evidenceTag: "NAEYC型: 発達に合った遊び",
         evidence: "遊びを通じた探索は、身体感覚・語彙・分類する力を一緒に使えます。",
         observe: "探す対象を自分で選べるか、親の言葉をまねるかを見る。",
         consult: "運動や感覚面の心配が続く場合は、専門家に相談してください。",
@@ -630,6 +633,7 @@ function fallbackSuggestions(payload) {
         steps: ["なぜかな？を1つ決める", "親子で予想する", "試して結果を話す"],
         phrases: ["予想と同じだった？", "次は何を変えてみる？"],
         skills: ["科学", "思考力", "親子対話"],
+        evidenceTag: "NAEYC型: 発達に合った遊び",
         evidence: "予想して試す遊びは、幼児期の探究心と実行機能を育てる足場になります。",
         observe: "予想、比較、言葉で説明する様子を一つだけ見る。",
         consult: "強い不安やこだわりで日常が難しい時は、専門家に相談してください。",
@@ -649,6 +653,7 @@ function normalizeSuggestions(suggestions) {
     steps: Array.isArray(item.steps) ? item.steps : String(item.steps || "").split("\n").filter(Boolean),
     phrases: Array.isArray(item.phrases) ? item.phrases : String(item.phrases || "").split("\n").filter(Boolean),
     skills: Array.isArray(item.skills) ? item.skills : String(item.skills || "").split(/[、,\n]/).filter(Boolean),
+    evidenceTag: item.evidenceTag || "",
     evidence: item.evidence || "",
     observe: item.observe || "",
     consult: item.consult || "",
@@ -674,6 +679,7 @@ function renderSuggestions(summary, suggestions) {
             <p class="suggestion-type">${esc(typeLabels[item.type] || "おすすめ案")}</p>
             <h3>${esc(item.title)}</h3>
           </div>
+          ${item.evidenceTag ? `<span class="evidence-tag">${esc(item.evidenceTag)}</span>` : ""}
         </div>
         <div class="detail-grid">
           ${detailBox("ねらい", item.aim)}

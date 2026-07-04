@@ -316,6 +316,48 @@ h1 {
   margin: 0;
 }
 
+.reference-guide {
+  border: 1px solid rgba(75, 97, 80, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.reference-guide summary {
+  color: var(--green-deep);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.reference-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.reference-list a {
+  display: grid;
+  gap: 3px;
+  border-radius: 8px;
+  background: rgba(246, 248, 238, 0.9);
+  color: inherit;
+  padding: 10px;
+  text-decoration: none;
+}
+
+.reference-list strong {
+  color: var(--green-deep);
+  font-size: 13px;
+}
+
+.reference-list span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 h2 {
   font-size: 22px;
   line-height: 1.25;
@@ -547,7 +589,21 @@ textarea:focus {
 .suggestion-top {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 16px;
+}
+
+.evidence-tag {
+  border: 1px solid rgba(59, 143, 92, 0.18);
+  border-radius: 999px;
+  background: #fff6d8;
+  color: var(--green-deep);
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  padding: 6px 9px;
+  white-space: nowrap;
 }
 
 .suggestion-type {
@@ -801,6 +857,15 @@ textarea:focus {
     height: auto;
     aspect-ratio: 1;
     max-width: 180px;
+  }
+
+  .suggestion-top {
+    display: grid;
+  }
+
+  .evidence-tag {
+    justify-self: start;
+    white-space: normal;
   }
 
   .auth-form .secondary-btn {
