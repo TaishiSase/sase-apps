@@ -216,12 +216,16 @@
         </details>
 
         <form id="askForm" class="ask-form">
-          <div class="segmented" role="tablist" aria-label="相談タイプ">
-            <label><input type="radio" name="consultationType" value="play" checked><span>遊び</span></label>
-            <label><input type="radio" name="consultationType" value="weekly"><span>1週間</span></label>
-            <label><input type="radio" name="consultationType" value="worry"><span>悩み</span></label>
-            <label><input type="radio" name="consultationType" value="reflection"><span>振り返り</span></label>
-          </div>
+          <fieldset class="category-field">
+            <legend>相談の目的</legend>
+            <p class="field-help">今日すぐ使いたい内容を選びます。週/月の計画は下の「育ちのカレンダー」で作れます。</p>
+            <div class="segmented" role="radiogroup" aria-label="相談の目的">
+              <label><input type="radio" name="consultationType" value="today_action" checked><span>今日の遊び</span></label>
+              <label><input type="radio" name="consultationType" value="parenting_worry"><span>悩み相談</span></label>
+              <label><input type="radio" name="consultationType" value="phrasing"><span>声かけ</span></label>
+              <label><input type="radio" name="consultationType" value="reflection"><span>振り返り</span></label>
+            </div>
+          </fieldset>
 
           <div class="choice-row">
             <label>
@@ -246,6 +250,7 @@
 
           <fieldset class="category-field">
             <legend>ジャンル</legend>
+            <p class="field-help">複数選べます。選んだジャンルをもとに、遊び・教材・声かけを組み合わせます。</p>
             <div id="categoryChoices" class="chip-grid"></div>
           </fieldset>
 

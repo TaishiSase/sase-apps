@@ -242,6 +242,14 @@ function renderCategoryChoices() {
       <span>${label}</span>
     </label>
   `).join("");
+  syncChoiceState(categoryChoices);
+}
+
+function syncChoiceState(root = document) {
+  root.querySelectorAll(".chip-grid label, .segmented label, .feedback-grid label").forEach((label) => {
+    const input = label.querySelector("input");
+    if (input) label.classList.toggle("is-checked", input.checked);
+  });
 }
 
 function fillProfileForm() {
@@ -1376,7 +1384,7 @@ askForm.addEventListener("submit", async (event) => {
   const payload = buildPayload(formData);
   askButton.disabled = true;
   askButton.textContent = "考え中...";
-  resultsSection.innerHTML = '<div class="loading">すくすく案を考えています...</div>';
+  resultsSection.innerHTML = '<div class="loading">AIが今日の提案を考えています...</div>';
 
   try {
     const data = await requestSuggestions(payload);
@@ -1392,10 +1400,21 @@ askForm.addEventListener("submit", async (event) => {
   } catch (error) {
     const data = fallbackSuggestions(payload);
     renderSuggestions(data.summary, data.suggestions);
-    resultsSection.insertAdjacentHTML("afterbegin", `<div class="error-card">${esc(error.message)}</div>`);
+    resultsSection.insertAdjacentHTML("afterbegin", `
+      <div class="error-card">
+        AI提案の通信で一時的に失敗しました。下には安全なサンプル提案を表示しています。少し待ってからもう一度試してください。<br>
+        <small>${esc(error.message)}</small>
+      </div>
+    `);
   } finally {
     askButton.disabled = false;
     askButton.textContent = "提案してもらう";
+  }
+});
+
+askForm.addEventListener("change", (event) => {
+  if (event.target.matches('input[type="checkbox"], input[type="radio"]')) {
+    syncChoiceState(askForm);
   }
 });
 
