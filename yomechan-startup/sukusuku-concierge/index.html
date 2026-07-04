@@ -258,6 +258,48 @@
         </form>
       </article>
 
+      <article class="panel planner-panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">calendar mission</p>
+            <h2>育ちのカレンダー</h2>
+          </div>
+          <span class="status-pill soft" id="missionStatus">未作成</span>
+        </div>
+        <div class="planner-hero">
+          <div class="planner-illustration" aria-hidden="true">
+            <span>📅</span><span>🎵</span><span>🚀</span>
+          </div>
+          <p>その週や月にやることを、英語・運動・科学・音楽などのミッションに分けて作ります。終わったものをチェックすると達成状況が見えます。</p>
+        </div>
+        <form id="plannerForm" class="planner-form">
+          <div class="segmented" role="tablist" aria-label="プラン期間">
+            <label><input type="radio" name="planRange" value="week" checked><span>週プラン</span></label>
+            <label><input type="radio" name="planRange" value="month"><span>月プラン</span></label>
+          </div>
+          <div class="choice-row">
+            <label>
+              <span>開始日</span>
+              <input name="planStartDate" type="date">
+            </label>
+            <label>
+              <span>負荷</span>
+              <select name="planIntensity">
+                <option value="light">軽め</option>
+                <option value="balanced" selected>ちょうどよく</option>
+                <option value="rich">しっかり</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>今週/月の希望</span>
+            <textarea name="planMessage" rows="3" placeholder="英語の歌を増やしたい、週末は科学遊びをしたい、動画は短めがいい、など"></textarea>
+          </label>
+          <button class="primary-btn wide" type="submit" id="plannerButton">プランを作る</button>
+        </form>
+        <div id="plannerBoard" class="planner-board"></div>
+      </article>
+
       <section class="results" id="resultsSection" aria-live="polite"></section>
 
       <article class="panel log-panel">

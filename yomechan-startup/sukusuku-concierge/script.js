@@ -22,6 +22,8 @@ const typeLabels = {
   deep: "親子でじっくり案"
 };
 
+const dayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+
 const state = loadState();
 
 let db = null;
@@ -61,14 +63,19 @@ const askButton = document.getElementById("askButton");
 const logEmpty = document.getElementById("logEmpty");
 const logHistory = document.getElementById("logHistory");
 const selectedSuggestionTitle = document.getElementById("selectedSuggestionTitle");
+const plannerForm = document.getElementById("plannerForm");
+const plannerButton = document.getElementById("plannerButton");
+const plannerBoard = document.getElementById("plannerBoard");
+const missionStatus = document.getElementById("missionStatus");
 
 let authMode = "login";
 
 function loadState() {
+  const fallback = { profile: {}, suggestions: [], logs: [], currentPlan: null };
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { profile: {}, suggestions: [], logs: [] };
+    return { ...fallback, ...(JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}) };
   } catch (_) {
-    return { profile: {}, suggestions: [], logs: [] };
+    return fallback;
   }
 }
 
@@ -217,6 +224,35 @@ function getCategoryLabels(values) {
   });
 }
 
+function formatDateInputValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(dateText, days) {
+  const date = new Date(`${dateText}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return formatDateInputValue(date);
+}
+
+function getWeekStart(dateText = formatDateInputValue()) {
+  const date = new Date(`${dateText}T00:00:00`);
+  const day = date.getDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + offset);
+  return formatDateInputValue(date);
+}
+
+function getPlanStartDate() {
+  return plannerForm?.elements.planStartDate?.value || getWeekStart();
+}
+
+function getCompletedMissionIds(plan = state.currentPlan) {
+  return new Set(plan?.completedMissionIds || []);
+}
+
 function buildPayload(formData) {
   const selectedCategories = getSelectedCategories();
   return {
@@ -275,6 +311,7 @@ async function refreshAuthState() {
   }
   await loadFirstChild();
   await loadRecentLogs();
+  await loadCurrentPlan();
 }
 
 async function loadFamilyMembership() {
@@ -363,10 +400,15 @@ function updateEditAccess() {
   logForm.querySelectorAll("input, select, textarea, button").forEach((element) => {
     element.disabled = !canEdit;
   });
+  plannerForm?.querySelectorAll("input, select, textarea, button").forEach((element) => {
+    element.disabled = !canEdit;
+  });
   if (!canEdit) {
     askButton.textContent = "閲覧のみ";
+    if (plannerButton) plannerButton.textContent = "閲覧のみ";
   } else if (!askButton.disabled) {
     askButton.textContent = "提案してもらう";
+    if (plannerButton && !plannerButton.disabled) plannerButton.textContent = "プランを作る";
   }
 }
 
@@ -539,6 +581,119 @@ async function requestSuggestions(payload) {
   return data;
 }
 
+async function requestPlan(payload) {
+  const response = await fetch("/api/sukusuku-plan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "プラン生成に失敗しました。");
+  }
+  return data;
+}
+
+function buildPlanPayload(formData) {
+  const selectedCategories = getSelectedCategories();
+  return {
+    profile: state.profile,
+    range: formData.get("planRange") || "week",
+    startDate: formData.get("planStartDate") || getWeekStart(),
+    intensity: formData.get("planIntensity") || "balanced",
+    categories: selectedCategories,
+    categoryLabels: getCategoryLabels(selectedCategories),
+    message: formData.get("planMessage") || "",
+    recentLogs: state.logs.slice(-10),
+    currentPlan: state.currentPlan,
+    createdAt: new Date().toISOString()
+  };
+}
+
+function normalizeResource(resource = {}) {
+  const url = String(resource.url || "").trim();
+  return {
+    title: resource.title || "",
+    type: resource.type || "なし",
+    url: /^https:\/\/[^\s<>"']+$/i.test(url) ? url : "",
+    note: resource.note || ""
+  };
+}
+
+function normalizePlan(data, payload = {}) {
+  const range = data.range === "month" || payload.range === "month" ? "month" : "week";
+  const startDate = payload.startDate || data.startDate || getWeekStart();
+  const missions = (data.missions || []).slice(0, range === "month" ? 12 : 7).map((mission, index) => {
+    const date = mission.date || addDays(startDate, range === "month" ? Math.floor(index / 3) * 7 + (index % 3) * 2 : index);
+    const dateObj = new Date(`${date}T00:00:00`);
+    return {
+      id: String(mission.id || `${range}-${index + 1}`).replace(/[^a-zA-Z0-9-]/g, "-"),
+      date,
+      dayLabel: mission.dayLabel || dayLabels[dateObj.getDay()],
+      title: mission.title || "親子ミッション",
+      category: mission.category || "会話",
+      duration: mission.duration || "5分",
+      aim: mission.aim || "",
+      steps: Array.isArray(mission.steps) ? mission.steps : String(mission.steps || "").split("\n").filter(Boolean),
+      successCriteria: mission.successCriteria || "親子で一度試せたら達成",
+      parentPhrase: mission.parentPhrase || "",
+      evidenceTag: mission.evidenceTag || "NAEYC型",
+      resource: normalizeResource(mission.resource)
+    };
+  });
+
+  return {
+    id: data.id || crypto.randomUUID(),
+    range,
+    startDate,
+    summary: data.summary || "今のプロフィールと記録から、続けやすいミッションに整理しました。",
+    theme: data.theme || (range === "month" ? "今月の育ちミッション" : "今週の育ちミッション"),
+    parentGuide: data.parentGuide || "完璧にこなすより、子どもの反応がよかったものを次につなげます。",
+    missions,
+    completedMissionIds: data.completedMissionIds || [],
+    createdAt: data.createdAt || new Date().toISOString()
+  };
+}
+
+async function savePlanToSupabase(plan) {
+  if (!db || !currentUser || !activeFamily || !activeChild || activeMember?.role !== "parent") return false;
+  const result = await db.from("weekly_plans").upsert({
+    family_id: activeFamily.id,
+    child_id: activeChild.id,
+    week_start: getWeekStart(plan.startDate),
+    plan_json: plan,
+    created_by: currentUser.id
+  }, { onConflict: "child_id,week_start" });
+  if (result.error) throw result.error;
+  return true;
+}
+
+async function loadCurrentPlan() {
+  if (!db || !activeFamily || !activeChild) {
+    renderPlanner();
+    return;
+  }
+
+  const result = await db
+    .from("weekly_plans")
+    .select("id, plan_json, week_start, created_at")
+    .eq("family_id", activeFamily.id)
+    .eq("child_id", activeChild.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (result.error) throw result.error;
+  if (result.data?.plan_json) {
+    state.currentPlan = normalizePlan({
+      ...result.data.plan_json,
+      id: result.data.id
+    }, { startDate: result.data.plan_json.startDate || result.data.week_start });
+    saveState();
+  }
+  renderPlanner();
+}
+
 async function saveSuggestionsToSupabase(payload, data) {
   if (!db || !currentUser || !activeFamily || !activeChild || activeMember?.role !== "parent") return null;
 
@@ -592,6 +747,7 @@ async function saveSuggestionsToSupabase(payload, data) {
     evidence: row.raw_response?.evidence || "",
     observe: row.raw_response?.observe || "",
     consult: row.raw_response?.consult || "",
+    resourceLinks: row.raw_response?.resourceLinks || [],
     fallback: row.fallback
   }));
 }
@@ -615,6 +771,14 @@ function fallbackSuggestions(payload) {
         evidence: "応答的なやりとりは、言葉と社会性の土台を育てるとされています。",
         observe: "子どもが自分から見せる、指さす、もう一度求める反応を見る。",
         consult: "言葉や反応の少なさが長く気になる時は、健診や小児科で相談を。",
+        resourceLinks: [
+          {
+            title: "Super Simple Songs",
+            type: "動画/歌",
+            url: "https://supersimple.com/super-simple-songs/",
+            note: "短い歌を親子で一緒に歌う。"
+          }
+        ],
         fallback: "集中が続かなければ、1問だけで終わって大丈夫。"
       },
       {
@@ -630,6 +794,14 @@ function fallbackSuggestions(payload) {
         evidence: "遊びを通じた探索は、身体感覚・語彙・分類する力を一緒に使えます。",
         observe: "探す対象を自分で選べるか、親の言葉をまねるかを見る。",
         consult: "運動や感覚面の心配が続く場合は、専門家に相談してください。",
+        resourceLinks: [
+          {
+            title: "GoNoodle",
+            type: "動画/運動",
+            url: "https://www.gonoodle.com/",
+            note: "雨の日の室内運動に、短い動画を親子で選ぶ。"
+          }
+        ],
         fallback: "難しければ親が先に1つ見つけて見本を見せる。"
       },
       {
@@ -645,6 +817,14 @@ function fallbackSuggestions(payload) {
         evidence: "予想して試す遊びは、幼児期の探究心と実行機能を育てる足場になります。",
         observe: "予想、比較、言葉で説明する様子を一つだけ見る。",
         consult: "強い不安やこだわりで日常が難しい時は、専門家に相談してください。",
+        resourceLinks: [
+          {
+            title: "NASA Kids' Club",
+            type: "サイト",
+            url: "https://www.nasa.gov/learning-resources/nasa-kids-club/",
+            note: "宇宙や科学の写真を見て、親子で『なぜ？』を話す。"
+          }
+        ],
         fallback: "実験が難しい日は、絵本の中の不思議を一緒に探す。"
       }
     ]
@@ -665,6 +845,7 @@ function normalizeSuggestions(suggestions) {
     evidence: item.evidence || "",
     observe: item.observe || "",
     consult: item.consult || "",
+    resourceLinks: Array.isArray(item.resourceLinks) ? item.resourceLinks.map(normalizeResource).filter((resource) => resource.url) : [],
     fallback: item.fallback || ""
   }));
 }
@@ -698,6 +879,7 @@ function renderSuggestions(summary, suggestions) {
           ${detailBox("発達・教育の背景", item.evidence)}
           ${detailBox("見るポイント", item.observe)}
           ${detailBox("相談目安", item.consult)}
+          ${resourceBox("おすすめ教材", item.resourceLinks)}
           ${detailBox("うまくいかなかった時", item.fallback)}
         </div>
         <button class="log-button" type="button" data-log-id="${esc(item.id)}">この提案を記録する</button>
@@ -721,6 +903,21 @@ function listBox(label, values, full = false) {
     <div class="detail-box ${full ? "full" : ""}">
       <div class="detail-label">${label}</div>
       <ul>${items.length ? items.map((value) => `<li>${esc(value)}</li>`).join("") : "<li>未設定</li>"}</ul>
+    </div>
+  `;
+}
+
+function resourceBox(label, resources = []) {
+  const items = (resources || []).filter((resource) => resource?.url);
+  return `
+    <div class="detail-box full resource-box">
+      <div class="detail-label">${label}</div>
+      ${items.length ? items.map((resource) => `
+        <a href="${esc(resource.url)}" target="_blank" rel="noopener">
+          <strong>${esc(resource.title || resource.type || "教材")}</strong>
+          <span>${esc(resource.type || "リンク")} / ${esc(resource.note || "親子で一緒に使ってください。")}</span>
+        </a>
+      `).join("") : "<p>今回は家庭内の遊びだけで進められます。</p>"}
     </div>
   `;
 }
@@ -848,6 +1045,116 @@ function renderReflection() {
       <p>${esc(latest.note || "メモなし")}</p>
     </div>
   `;
+}
+
+function renderPlanner() {
+  if (!plannerBoard || !missionStatus) return;
+  const plan = state.currentPlan;
+  if (!plan || !plan.missions?.length) {
+    missionStatus.textContent = "未作成";
+    plannerBoard.innerHTML = `
+      <div class="empty-state">プロフィールを保存してから、週プランまたは月プランを作れます。</div>
+    `;
+    return;
+  }
+
+  const completed = getCompletedMissionIds(plan);
+  const total = plan.missions.length;
+  const done = plan.missions.filter((mission) => completed.has(mission.id)).length;
+  const percent = total ? Math.round((done / total) * 100) : 0;
+  missionStatus.textContent = `${done}/${total} 達成`;
+
+  plannerBoard.innerHTML = `
+    <section class="mission-summary">
+      <div>
+        <p class="section-kicker">${plan.range === "month" ? "monthly plan" : "weekly plan"}</p>
+        <h3>${esc(plan.theme)}</h3>
+        <p>${esc(plan.summary)}</p>
+      </div>
+      <div class="mission-ring" style="--progress:${percent}%">
+        <strong>${percent}%</strong>
+        <span>達成</span>
+      </div>
+    </section>
+    <p class="mission-guide">${esc(plan.parentGuide)}</p>
+    <div class="mission-grid">
+      ${plan.missions.map((mission) => renderMissionCard(mission, completed.has(mission.id))).join("")}
+    </div>
+  `;
+}
+
+function renderMissionCard(mission, done) {
+  const date = mission.date ? `${mission.date.slice(5).replace("-", "/")}(${esc(mission.dayLabel || "")})` : "";
+  const resource = normalizeResource(mission.resource);
+  return `
+    <article class="mission-card ${done ? "done" : ""}">
+      <div class="mission-head">
+        <div>
+          <span class="mission-date">${esc(date)}</span>
+          <h4>${esc(mission.title)}</h4>
+        </div>
+        <button class="mission-check" type="button" data-mission-id="${esc(mission.id)}" aria-pressed="${done ? "true" : "false"}">
+          ${done ? "達成" : "未達"}
+        </button>
+      </div>
+      <div class="mission-meta">
+        <span>${esc(mission.category)}</span>
+        <span>${esc(mission.duration)}</span>
+        <span>${esc(mission.evidenceTag)}</span>
+      </div>
+      <p>${esc(mission.aim)}</p>
+      <ul>${(mission.steps || []).map((step) => `<li>${esc(step)}</li>`).join("")}</ul>
+      <div class="success-line"><strong>達成条件</strong><span>${esc(mission.successCriteria)}</span></div>
+      ${mission.parentPhrase ? `<div class="success-line"><strong>声かけ</strong><span>${esc(mission.parentPhrase)}</span></div>` : ""}
+      ${resource.url ? `
+        <a class="mission-resource" href="${esc(resource.url)}" target="_blank" rel="noopener">
+          <strong>${esc(resource.title)}</strong>
+          <span>${esc(resource.type)} / ${esc(resource.note)}</span>
+        </a>
+      ` : ""}
+    </article>
+  `;
+}
+
+function fallbackPlan(payload) {
+  const startDate = payload.startDate || getWeekStart();
+  const childName = payload.profile.name || "お子さん";
+  const baseMissions = [
+    ["english", "英語の歌を1曲だけ一緒に歌う", "英語", "5分", "Super Simple Songs", "https://supersimple.com/super-simple-songs/"],
+    ["movement", "まねっこジャンプとストップ遊び", "運動", "5分", "GoNoodle", "https://www.gonoodle.com/"],
+    ["science", "水に浮くもの探し", "科学", "15分", "NASA Kids' Club", "https://www.nasa.gov/learning-resources/nasa-kids-club/"],
+    ["talk", "今日いちばん好きだったことを聞く", "会話", "5分", "", ""],
+    ["book", "絵本の続きを親子で予想する", "絵本", "10分", "Khan Academy Kids", "https://www.khanacademy.org/kids"],
+    ["music", "親子でリズム手拍子", "音楽", "5分", "Sesame Street", "https://www.sesamestreet.org/videos"],
+    ["craft", "紙を丸めて的あて工作", "工作", "20分", "", ""]
+  ];
+  const missions = baseMissions.map(([id, title, category, duration, resourceTitle, url], index) => ({
+    id: `${id}-${index + 1}`,
+    date: addDays(startDate, index),
+    dayLabel: dayLabels[new Date(`${addDays(startDate, index)}T00:00:00`).getDay()],
+    title,
+    category,
+    duration,
+    aim: `${childName}の反応を見ながら、楽しい成功体験を作る。`,
+    steps: ["親が先に少し見本を見せる", "子どもが選ぶ場面を1つ入れる", "できたところを短く言葉にする"],
+    successCriteria: "親子で一度笑って終われたら達成",
+    parentPhrase: "いいね、もう一回やってみる？",
+    evidenceTag: index % 3 === 0 ? "Harvard型" : "NAEYC型",
+    resource: url ? { title: resourceTitle, type: "サイト/動画", url, note: "親子で短く使う" } : { type: "なし" }
+  }));
+  const monthMissions = Array.from({ length: 12 }, (_, index) => ({
+    ...missions[index % missions.length],
+    id: `month-${index + 1}`,
+    date: addDays(startDate, Math.floor(index / 3) * 7 + (index % 3) * 2)
+  }));
+
+  return normalizePlan({
+    range: payload.range,
+    summary: "AI接続が不安定だったため、手元のサンプルプランを表示しています。",
+    theme: payload.range === "month" ? "今月の親子ミッション" : "今週の親子ミッション",
+    parentGuide: "全部こなすより、反応がよかったものを次の週に残しましょう。",
+    missions: payload.range === "month" ? monthMissions : missions
+  }, payload);
 }
 
 authForm.addEventListener("click", (event) => {
@@ -1020,6 +1327,59 @@ askForm.addEventListener("submit", async (event) => {
   }
 });
 
+plannerForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(plannerForm);
+  const payload = buildPlanPayload(formData);
+  plannerButton.disabled = true;
+  plannerButton.textContent = "作成中...";
+  plannerBoard.innerHTML = '<div class="loading">育ちのカレンダーを作っています...</div>';
+
+  try {
+    const data = await requestPlan(payload);
+    state.currentPlan = normalizePlan(data, payload);
+    saveState();
+    try {
+      const synced = await savePlanToSupabase(state.currentPlan);
+      setSyncStatus(synced ? "同期済み" : "ローカル保存", synced ? "online" : "local");
+    } catch (dbError) {
+      console.warn("Plan DB save failed:", dbError);
+      setSyncStatus("一部ローカル保存", "local");
+    }
+    renderPlanner();
+  } catch (error) {
+    state.currentPlan = fallbackPlan(payload);
+    saveState();
+    renderPlanner();
+    plannerBoard.insertAdjacentHTML("afterbegin", `<div class="error-card">${esc(error.message)}</div>`);
+  } finally {
+    plannerButton.disabled = false;
+    plannerButton.textContent = "プランを作る";
+  }
+});
+
+plannerBoard?.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-mission-id]");
+  if (!button || !state.currentPlan) return;
+  const missionId = button.dataset.missionId;
+  const completed = getCompletedMissionIds();
+  if (completed.has(missionId)) {
+    completed.delete(missionId);
+  } else {
+    completed.add(missionId);
+  }
+  state.currentPlan.completedMissionIds = Array.from(completed);
+  saveState();
+  renderPlanner();
+  try {
+    const synced = await savePlanToSupabase(state.currentPlan);
+    setSyncStatus(synced ? "同期済み" : "ローカル保存", synced ? "online" : "local");
+  } catch (error) {
+    console.warn("Plan progress save failed:", error);
+    setSyncStatus("一部ローカル保存", "local");
+  }
+});
+
 resultsSection.addEventListener("click", (event) => {
   const button = event.target.closest("[data-log-id]");
   if (button) {
@@ -1056,7 +1416,9 @@ logForm.addEventListener("submit", async (event) => {
 });
 
 renderCategoryChoices();
+if (plannerForm?.elements.planStartDate) plannerForm.elements.planStartDate.value = getWeekStart();
 fillProfileForm();
 renderLogHistory();
 renderReflection();
+renderPlanner();
 initSupabase();

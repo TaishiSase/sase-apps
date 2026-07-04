@@ -11,15 +11,13 @@ function extractOutputText(data) {
   const parts = [];
   for (const item of data.output || []) {
     for (const content of item.content || []) {
-      if (content.type === "output_text" && content.text) {
-        parts.push(content.text);
-      }
+      if (content.type === "output_text" && content.text) parts.push(content.text);
     }
   }
   return parts.join("\n");
 }
 
-function parseSuggestions(text) {
+function parsePlan(text) {
   const trimmed = text.trim();
   try {
     return JSON.parse(trimmed);
@@ -28,24 +26,6 @@ function parseSuggestions(text) {
     if (match) return JSON.parse(match[0]);
     throw new Error("AI response was not valid JSON.");
   }
-}
-
-function buildInstructions() {
-  return [
-    "あなたは0歳から6歳の子どもを育てる親のためのAI育児コンシェルジュです。",
-    "目的は、親の不安をやわらげ、今日できる具体的な遊び、声かけ、教育方針に変えることです。",
-    "ターゲットは教育熱心で質の高い情報を求める保護者です。上品で落ち着いた語り口にし、過度な不安訴求や断定を避けてください。",
-    "提案は、発達心理・幼児教育・小児保健で広く受け入れられている考え方を背景にしてください。特に、Harvard Center on the Developing Childのserve and return、NAEYCのDevelopmentally Appropriate Practice、CDCの発達マイルストーン確認、遊びを通じた学び、親子の応答的な関わりを優先してください。",
-    "医療診断、発達診断、治療方針の断定は禁止です。",
-    "発達や診断名に近い情報があっても、家庭でできる小さな関わりと専門家相談の目安に留めてください。",
-    "親を責めず、子どもを採点せず、いいところを伸ばし、次に育てたい力を補う表現にしてください。",
-    "エビデンスは論文風に長くせず、保護者が納得できる短い背景として書いてください。根拠が強い一般原則と、個別の推測を分けてください。",
-    "必ずJSONだけを返してください。Markdownや説明文は不要です。",
-    "evidenceTagは必ず次のいずれかにしてください: \"Harvard型: 応答的な関わり\", \"NAEYC型: 発達に合った遊び\", \"CDC型: 観察と相談目安\"。",
-    "教材・動画・アプリが役立つ場合のみ、resourceLinksに公式サイトや公式チャンネルを最大2件入れてください。URLはユーザー入力ではなく、resourceCatalogにあるURLだけを使ってください。",
-    "JSON形式: {\"summary\":\"短い総括\",\"suggestions\":[{\"type\":\"quick|creative|deep\",\"title\":\"\",\"aim\":\"\",\"materials\":\"\",\"steps\":[\"\"],\"phrases\":[\"\"],\"skills\":[\"\"],\"evidenceTag\":\"Harvard型: 応答的な関わり\",\"evidence\":\"発達・教育上の背景を80字程度で\",\"observe\":\"親が見るポイントを1つ\",\"consult\":\"心配が続く場合の相談目安を柔らかく\",\"fallback\":\"\",\"resourceLinks\":[{\"title\":\"\",\"type\":\"動画|アプリ|サイト\",\"url\":\"\",\"note\":\"親向けの短い使い方\"}]}]}",
-    "suggestionsは必ず3件で、quick, creative, deepを1件ずつ含めてください。"
-  ].join("\n");
 }
 
 function buildResourceCatalog() {
@@ -98,8 +78,31 @@ function buildResourceCatalog() {
       url: "https://www.scratchjr.org/",
       categories: ["科学", "算数", "工作"],
       note: "5歳以上向けの初歩プログラミング。物語づくりとして使う。"
+    },
+    {
+      title: "PBS KIDS ScratchJr",
+      type: "アプリ",
+      url: "https://pbskids.org/apps/pbs-kids-scratchjr",
+      categories: ["科学", "算数", "工作"],
+      note: "5-8歳向け。キャラクターを使った物語づくりに。"
     }
   ];
+}
+
+function buildInstructions() {
+  return [
+    "あなたは0歳から6歳の子どもを育てる親のためのAI育児コンシェルジュです。",
+    "週または月のカレンダー型プランを作ります。親が安心して続けられる、上品で現実的なミッション設計にしてください。",
+    "富裕層の教育熱心な保護者向けですが、詰め込み教育ではなく、発達に合った遊び、親子の応答的な関わり、生活の中の学びを重視してください。",
+    "背景にはHarvard Center on the Developing Childのserve and return、NAEYCのDevelopmentally Appropriate Practice、CDCの発達マイルストーン確認を置いてください。",
+    "医療診断、発達診断、治療方針の断定は禁止です。気になる点は観察と相談目安に留めてください。",
+    "動画やアプリのURLは、resourceCatalogに含まれるURLだけを使ってください。子ども一人で見せっぱなしにする表現は避け、親が一緒に使う前提にしてください。",
+    "週プランは7件、月プランは12件のmissionsを返してください。月プランは週3件程度のリズムにしてください。",
+    "missionのidは英数字とハイフンだけで、重複しない短いIDにしてください。",
+    "evidenceTagは必ず次のいずれかにしてください: \"Harvard型\", \"NAEYC型\", \"CDC型\"。",
+    "必ずJSONだけを返してください。Markdownや説明文は不要です。",
+    "JSON形式: {\"summary\":\"\",\"range\":\"week|month\",\"theme\":\"\",\"parentGuide\":\"\",\"missions\":[{\"id\":\"\",\"date\":\"YYYY-MM-DD\",\"dayLabel\":\"月\",\"title\":\"\",\"category\":\"英語\",\"duration\":\"5分\",\"aim\":\"\",\"steps\":[\"\"],\"successCriteria\":\"達成の目安を1つ\",\"parentPhrase\":\"\",\"evidenceTag\":\"NAEYC型\",\"resource\":{\"title\":\"\",\"type\":\"動画|アプリ|サイト|なし\",\"url\":\"\",\"note\":\"\"}}]}"
+  ].join("\n");
 }
 
 module.exports = async function handler(req, res) {
@@ -133,18 +136,19 @@ module.exports = async function handler(req, res) {
             role: "user",
             content: JSON.stringify({
               child: payload.profile || {},
-              consultationType: payload.consultationType,
-              durationType: payload.durationType,
-              advisorTone: payload.advisorTone,
+              range: payload.range || "week",
+              startDate: payload.startDate,
+              intensity: payload.intensity || "balanced",
               categories: payload.categoryLabels || payload.categories || [],
               parentMessage: payload.message || "",
               recentLogs: payload.recentLogs || [],
+              currentPlan: payload.currentPlan || null,
               resourceCatalog: buildResourceCatalog()
             })
           }
         ],
         reasoning: { effort: "low" },
-        max_output_tokens: 2400
+        max_output_tokens: 4200
       })
     });
 
@@ -155,11 +159,13 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const outputText = extractOutputText(data);
-    const parsed = parseSuggestions(outputText);
+    const parsed = parsePlan(extractOutputText(data));
     return sendJson(res, 200, {
       summary: parsed.summary,
-      suggestions: parsed.suggestions,
+      range: parsed.range || payload.range || "week",
+      theme: parsed.theme || "",
+      parentGuide: parsed.parentGuide || "",
+      missions: parsed.missions || [],
       model: MODEL
     });
   } catch (error) {
