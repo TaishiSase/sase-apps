@@ -466,6 +466,62 @@ textarea:focus {
   line-height: 1.7;
 }
 
+.log-history {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.log-entry {
+  border: 1px solid rgba(75, 97, 80, 0.14);
+  border-radius: 8px;
+  background: rgba(246, 248, 238, 0.88);
+  padding: 12px;
+}
+
+.log-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.log-entry-head strong {
+  color: var(--green-deep);
+  font-size: 13px;
+}
+
+.log-entry-head span,
+.log-entry p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.log-entry p {
+  margin: 0;
+}
+
+.log-entry-title {
+  color: #3b473e !important;
+  font-weight: 800;
+  margin-bottom: 4px !important;
+}
+
+.mini-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  background: #fff6d8;
+  color: var(--green-deep);
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 9px;
+  padding: 0 10px;
+}
+
 .hidden {
   display: none;
 }

@@ -47,6 +47,7 @@ const categoryChoices = document.getElementById("categoryChoices");
 const profileStatus = document.getElementById("profileStatus");
 const askButton = document.getElementById("askButton");
 const logEmpty = document.getElementById("logEmpty");
+const logHistory = document.getElementById("logHistory");
 const selectedSuggestionTitle = document.getElementById("selectedSuggestionTitle");
 
 function loadState() {
@@ -499,7 +500,7 @@ function showLogForm(suggestionId) {
 }
 
 async function saveLogToSupabase(log) {
-  if (!db || !currentUser || !activeFamily || !activeChild || activeMember?.role !== "parent") return;
+  if (!db || !currentUser || !activeFamily || !activeChild || activeMember?.role !== "parent") return false;
   const result = await db.from("activity_logs").insert({
     family_id: activeFamily.id,
     child_id: activeChild.id,
@@ -511,13 +512,14 @@ async function saveLogToSupabase(log) {
     want_repeat: log.wantRepeat
   });
   if (result.error) throw result.error;
+  return true;
 }
 
 async function loadRecentLogs() {
   if (!db || !activeFamily || !activeChild) return;
   const result = await db
     .from("activity_logs")
-    .select("id, suggestion_id, reaction, parent_note, want_repeat, logged_at")
+    .select("id, suggestion_id, reaction, parent_note, want_repeat, logged_at, suggestions(title)")
     .eq("family_id", activeFamily.id)
     .eq("child_id", activeChild.id)
     .order("logged_at", { ascending: false })
@@ -527,14 +529,59 @@ async function loadRecentLogs() {
   state.logs = result.data.reverse().map((row) => ({
     id: row.id,
     suggestionId: row.suggestion_id,
-    suggestionTitle: "",
+    suggestionTitle: row.suggestions?.title || state.suggestions.find((item) => item.id === row.suggestion_id)?.title || "",
     reaction: row.reaction,
     note: row.parent_note || "",
     wantRepeat: row.want_repeat,
     loggedAt: row.logged_at
   }));
   saveState();
+  renderLogHistory();
   renderReflection();
+}
+
+function getReactionLabel(reaction) {
+  return {
+    good: "とても効果的",
+    okay: "まあまあ",
+    bad: "微妙だった",
+    skipped: "やらなかった"
+  }[reaction] || "記録";
+}
+
+function formatDateTime(value) {
+  try {
+    return new Intl.DateTimeFormat("ja-JP", {
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(new Date(value));
+  } catch (_) {
+    return "";
+  }
+}
+
+function renderLogHistory() {
+  if (!state.logs.length) {
+    logEmpty.classList.remove("hidden");
+    logHistory.innerHTML = "";
+    return;
+  }
+
+  logEmpty.classList.add("hidden");
+  const recentLogs = [...state.logs].reverse().slice(0, 5);
+  logHistory.innerHTML = recentLogs.map((log) => `
+    <article class="log-entry">
+      <div class="log-entry-head">
+        <strong>${esc(getReactionLabel(log.reaction))}</strong>
+        <span>${esc(formatDateTime(log.loggedAt))}</span>
+      </div>
+      <p class="log-entry-title">${esc(log.suggestionTitle || "提案カードの記録")}</p>
+      <p>${esc(log.note || "メモなし")}</p>
+      ${log.wantRepeat ? '<span class="mini-pill">またやりたい</span>' : ""}
+    </article>
+  `).join("");
 }
 
 function renderReflection() {
@@ -663,19 +710,20 @@ logForm.addEventListener("submit", async (event) => {
   state.logs.push(log);
   saveState();
   try {
-    await saveLogToSupabase(log);
-    setSyncStatus("同期済み", "online");
+    const synced = await saveLogToSupabase(log);
+    setSyncStatus(synced ? "同期済み" : "ローカル保存", synced ? "online" : "local");
   } catch (error) {
     console.warn("Log DB save failed:", error);
     setSyncStatus("一部ローカル保存", "local");
   }
   logForm.reset();
   logForm.classList.add("hidden");
-  logEmpty.classList.remove("hidden");
+  renderLogHistory();
   renderReflection();
 });
 
 renderCategoryChoices();
 fillProfileForm();
+renderLogHistory();
 renderReflection();
 initSupabase();
