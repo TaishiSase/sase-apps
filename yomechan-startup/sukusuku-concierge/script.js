@@ -16,6 +16,58 @@ const categories = [
   ["food", "食育"]
 ];
 
+const recommendedResources = [
+  {
+    title: "Super Simple Songs",
+    type: "動画/歌",
+    url: "https://supersimple.com/super-simple-songs/",
+    note: "英語の歌を親子で短くまねる。",
+    keywords: ["英語", "音楽", "歌", "生活習慣"]
+  },
+  {
+    title: "Khan Academy Kids",
+    type: "アプリ",
+    url: "https://www.khanacademy.org/kids",
+    note: "絵本・数・英語を短時間で試す。",
+    keywords: ["英語", "算数", "絵本", "読"]
+  },
+  {
+    title: "Duolingo ABC",
+    type: "アプリ",
+    url: "https://abc.duolingo.com/",
+    note: "英語の文字や音に親しむ。",
+    keywords: ["英語", "文字", "フォニックス"]
+  },
+  {
+    title: "GoNoodle",
+    type: "動画/運動",
+    url: "https://www.gonoodle.com/",
+    note: "室内で体を動かす短い動画に。",
+    keywords: ["運動", "ダンス", "体", "感情"]
+  },
+  {
+    title: "Sesame Street",
+    type: "動画",
+    url: "https://www.sesamestreet.org/videos",
+    note: "英語・会話・社会性を親子で見る。",
+    keywords: ["英語", "会話", "社会性", "感情"]
+  },
+  {
+    title: "NASA Kids' Club",
+    type: "サイト",
+    url: "https://www.nasa.gov/learning-resources/nasa-kids-club/",
+    note: "科学や宇宙への興味づけに。",
+    keywords: ["科学", "自然", "宇宙"]
+  },
+  {
+    title: "ScratchJr",
+    type: "アプリ",
+    url: "https://www.scratchjr.org/",
+    note: "5歳以上の物語づくり・初歩プログラミングに。",
+    keywords: ["科学", "算数", "工作", "プログラミング"]
+  }
+];
+
 const typeLabels = {
   quick: "すぐできる案",
   creative: "ちょっと工夫する案",
@@ -620,6 +672,20 @@ function normalizeResource(resource = {}) {
   };
 }
 
+function inferResourceLinks(item = {}) {
+  const text = [
+    item.title,
+    item.aim,
+    item.materials,
+    ...(Array.isArray(item.skills) ? item.skills : []),
+    ...(Array.isArray(item.steps) ? item.steps : [])
+  ].filter(Boolean).join(" ");
+  return recommendedResources
+    .filter((resource) => resource.keywords.some((keyword) => text.includes(keyword)))
+    .slice(0, 2)
+    .map(({ keywords, ...resource }) => resource);
+}
+
 function normalizePlan(data, payload = {}) {
   const range = data.range === "month" || payload.range === "month" ? "month" : "week";
   const startDate = payload.startDate || data.startDate || getWeekStart();
@@ -832,22 +898,28 @@ function fallbackSuggestions(payload) {
 }
 
 function normalizeSuggestions(suggestions) {
-  return (suggestions || []).slice(0, 3).map((item, index) => ({
-    id: item.id || crypto.randomUUID(),
-    type: item.type || ["quick", "creative", "deep"][index] || "quick",
-    title: item.title || "今日のおすすめ",
-    aim: item.aim || "",
-    materials: item.materials || "",
-    steps: Array.isArray(item.steps) ? item.steps : String(item.steps || "").split("\n").filter(Boolean),
-    phrases: Array.isArray(item.phrases) ? item.phrases : String(item.phrases || "").split("\n").filter(Boolean),
-    skills: Array.isArray(item.skills) ? item.skills : String(item.skills || "").split(/[、,\n]/).filter(Boolean),
-    evidenceTag: item.evidenceTag || "",
-    evidence: item.evidence || "",
-    observe: item.observe || "",
-    consult: item.consult || "",
-    resourceLinks: Array.isArray(item.resourceLinks) ? item.resourceLinks.map(normalizeResource).filter((resource) => resource.url) : [],
-    fallback: item.fallback || ""
-  }));
+  return (suggestions || []).slice(0, 3).map((item, index) => {
+    const normalized = {
+      id: item.id || crypto.randomUUID(),
+      type: item.type || ["quick", "creative", "deep"][index] || "quick",
+      title: item.title || "今日のおすすめ",
+      aim: item.aim || "",
+      materials: item.materials || "",
+      steps: Array.isArray(item.steps) ? item.steps : String(item.steps || "").split("\n").filter(Boolean),
+      phrases: Array.isArray(item.phrases) ? item.phrases : String(item.phrases || "").split("\n").filter(Boolean),
+      skills: Array.isArray(item.skills) ? item.skills : String(item.skills || "").split(/[、,\n]/).filter(Boolean),
+      evidenceTag: item.evidenceTag || "",
+      evidence: item.evidence || "",
+      observe: item.observe || "",
+      consult: item.consult || "",
+      resourceLinks: Array.isArray(item.resourceLinks) ? item.resourceLinks.map(normalizeResource).filter((resource) => resource.url) : [],
+      fallback: item.fallback || ""
+    };
+    if (!normalized.resourceLinks.length) {
+      normalized.resourceLinks = inferResourceLinks(normalized).map(normalizeResource).filter((resource) => resource.url);
+    }
+    return normalized;
+  });
 }
 
 function renderSuggestions(summary, suggestions) {
