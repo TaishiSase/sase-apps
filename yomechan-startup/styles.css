@@ -1,0 +1,129 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Zen Maru Gothic", "Noto Sans JP", sans-serif;
+  color: #24302a;
+  background:
+    linear-gradient(180deg, rgba(255, 248, 229, 0.92), rgba(236, 250, 240, 0.9)),
+    #f6f4e8;
+}
+
+a {
+  color: inherit;
+}
+
+.page {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 20px 18px 48px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0 22px;
+}
+
+.back-link {
+  color: #45624f;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.badge {
+  border: 1px solid rgba(69, 98, 79, 0.22);
+  border-radius: 999px;
+  color: #45624f;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 6px 10px;
+  text-transform: uppercase;
+}
+
+.hero {
+  padding: 28px 0 30px;
+}
+
+.eyebrow {
+  color: #d1734b;
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+h1 {
+  font-size: clamp(32px, 8vw, 56px);
+  line-height: 1.16;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.lead {
+  color: #5a6b60;
+  font-size: 16px;
+  line-height: 1.8;
+  margin: 18px 0 0;
+}
+
+.apps {
+  display: grid;
+  gap: 14px;
+}
+
+.app-card {
+  display: grid;
+  grid-template-columns: 58px 1fr 24px;
+  align-items: center;
+  gap: 16px;
+  min-height: 132px;
+  padding: 18px;
+  border: 1px solid rgba(69, 98, 79, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 18px 48px rgba(78, 93, 68, 0.12);
+  text-decoration: none;
+}
+
+.app-icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 8px;
+  background: #def7e8;
+  font-size: 28px;
+}
+
+.app-kicker {
+  color: #3d8b5d;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.app-body h2 {
+  font-size: 21px;
+  line-height: 1.3;
+  margin: 0 0 6px;
+}
+
+.app-body p {
+  color: #677267;
+  font-size: 13px;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.arrow {
+  color: #3d8b5d;
+  font-size: 22px;
+  font-weight: 800;
+}

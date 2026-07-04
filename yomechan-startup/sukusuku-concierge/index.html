@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>すくすくコンシェルジュ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/yomechan-startup/sukusuku-concierge/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="app-header">
+      <a class="back-link" href="../">← 嫁ちゃん起業奮闘記</a>
+      <div class="brand">
+        <div class="brand-mark">🌱</div>
+        <div>
+          <p class="brand-kicker">AI育児コンシェルジュ</p>
+          <h1>すくすくコンシェルジュ</h1>
+        </div>
+      </div>
+      <p class="brand-copy">親の不安を、今日できる遊びと声かけに変える。</p>
+    </header>
+
+    <section class="panel auth-panel" id="authPanel">
+      <div class="panel-head">
+        <div>
+          <p class="section-kicker">family sync</p>
+          <h2>家族データ同期</h2>
+        </div>
+        <span class="status-pill" id="syncStatus">ローカル保存</span>
+      </div>
+      <form id="authForm" class="auth-form">
+        <label>
+          <span>メール</span>
+          <input name="email" type="email" autocomplete="email" placeholder="taish.dengel@gmail.com">
+        </label>
+        <label>
+          <span>パスワード</span>
+          <input name="password" type="password" autocomplete="current-password" placeholder="Supabase Authのパスワード">
+        </label>
+        <button class="secondary-btn" type="submit">ログインして同期</button>
+      </form>
+      <div class="auth-session hidden" id="authSession">
+        <p id="authStatus">ログイン中</p>
+        <button class="secondary-btn" type="button" id="authLogout">ログアウト</button>
+      </div>
+      <p class="auth-note">ログインすると、プロフィール、AI相談、提案、実施記録をSupabaseに保存します。</p>
+    </section>
+
+    <section class="dashboard">
+      <article class="panel profile-panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">child profile</p>
+            <h2>子どもプロフィール</h2>
+          </div>
+          <span class="status-pill" id="profileStatus">未保存</span>
+        </div>
+
+        <form id="profileForm" class="form-grid">
+          <label>
+            <span>名前</span>
+            <input name="name" type="text" placeholder="ことちゃん" autocomplete="off" required>
+          </label>
+          <label>
+            <span>生年月日</span>
+            <input name="birthDate" type="date" required>
+          </label>
+          <label>
+            <span>性別</span>
+            <select name="gender">
+              <option value="">未選択</option>
+              <option value="girl">女の子</option>
+              <option value="boy">男の子</option>
+              <option value="other">その他・未回答</option>
+            </select>
+          </label>
+          <label>
+            <span>最近好きなこと</span>
+            <textarea name="likes" rows="3" placeholder="歌、絵本、外遊び、シールなど"></textarea>
+          </label>
+          <label>
+            <span>少し気になること</span>
+            <textarea name="concerns" rows="3" placeholder="言葉、集中、食事、睡眠、運動など"></textarea>
+          </label>
+          <label>
+            <span>伸ばしたいこと</span>
+            <textarea name="goals" rows="3" placeholder="英語、会話、体力、思いやり、好奇心など"></textarea>
+          </label>
+          <button class="primary-btn" type="submit">保存</button>
+        </form>
+      </article>
+
+      <article class="panel ask-panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">concierge</p>
+            <h2>今日の相談</h2>
+          </div>
+          <span class="status-pill soft">3案提案</span>
+        </div>
+
+        <form id="askForm" class="ask-form">
+          <div class="segmented" role="tablist" aria-label="相談タイプ">
+            <label><input type="radio" name="consultationType" value="play" checked><span>遊び</span></label>
+            <label><input type="radio" name="consultationType" value="weekly"><span>1週間</span></label>
+            <label><input type="radio" name="consultationType" value="worry"><span>悩み</span></label>
+            <label><input type="radio" name="consultationType" value="reflection"><span>振り返り</span></label>
+          </div>
+
+          <div class="choice-row">
+            <label>
+              <span>時間</span>
+              <select name="durationType">
+                <option value="five_min">5分</option>
+                <option value="thirty_min">30分</option>
+                <option value="weekend">週末の大きな活動</option>
+                <option value="habit">習慣化</option>
+              </select>
+            </label>
+            <label>
+              <span>話し方</span>
+              <select name="advisorTone">
+                <option value="nursery">やさしい保育士さん</option>
+                <option value="science">科学的な教育アドバイザー</option>
+                <option value="friend">明るいママ友</option>
+                <option value="coach">具体策だけ出すコーチ</option>
+              </select>
+            </label>
+          </div>
+
+          <fieldset class="category-field">
+            <legend>ジャンル</legend>
+            <div id="categoryChoices" class="chip-grid"></div>
+          </fieldset>
+
+          <label>
+            <span>相談メモ</span>
+            <textarea name="message" rows="4" placeholder="今日は雨で外に出にくい。英語と運動を少し入れたい、など"></textarea>
+          </label>
+
+          <button class="primary-btn wide" type="submit" id="askButton">提案してもらう</button>
+        </form>
+      </article>
+    </section>
+
+    <section class="results" id="resultsSection" aria-live="polite"></section>
+
+    <section class="lower-grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">log</p>
+            <h2>実施記録</h2>
+          </div>
+        </div>
+        <form id="logForm" class="log-form hidden">
+          <input type="hidden" name="suggestionId">
+          <p class="selected-title" id="selectedSuggestionTitle"></p>
+          <div class="feedback-grid">
+            <label><input type="radio" name="reaction" value="good" checked><span>反応よかった</span></label>
+            <label><input type="radio" name="reaction" value="okay"><span>まあまあ</span></label>
+            <label><input type="radio" name="reaction" value="bad"><span>微妙だった</span></label>
+            <label><input type="radio" name="reaction" value="skipped"><span>やらなかった</span></label>
+          </div>
+          <label>
+            <span>メモ</span>
+            <textarea name="note" rows="3" placeholder="子どもの反応、親の気づきなど"></textarea>
+          </label>
+          <label class="check-line">
+            <input type="checkbox" name="wantRepeat" checked>
+            <span>またやりたい</span>
+          </label>
+          <button class="secondary-btn" type="submit">記録する</button>
+        </form>
+        <div id="logEmpty" class="empty-state">提案カードから記録できます。</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">reflection</p>
+            <h2>振り返り</h2>
+          </div>
+        </div>
+        <div id="reflectionContent" class="reflection"></div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/yomechan-startup/sukusuku-concierge/script.js"></script>
+</body>
+</html>
