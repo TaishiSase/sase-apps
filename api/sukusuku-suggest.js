@@ -42,7 +42,7 @@ function buildInstructions() {
     "エビデンスは論文風に長くせず、保護者が納得できる短い背景として書いてください。根拠が強い一般原則と、個別の推測を分けてください。",
     "必ずJSONだけを返してください。Markdownや説明文は不要です。",
     "evidenceTagは必ず次のいずれかにしてください: \"Harvard型: 応答的な関わり\", \"NAEYC型: 発達に合った遊び\", \"CDC型: 観察と相談目安\"。",
-    "教材・動画・アプリが役立つ場合のみ、resourceLinksに公式サイトや公式チャンネルを最大2件入れてください。URLはユーザー入力ではなく、resourceCatalogにあるURLだけを使ってください。",
+    "教材・動画・アプリが役立つ場合のみ、resourceLinksに公式サイトや公式チャンネルを最大2件入れてください。英語・音楽・運動・科学・絵本・算数がカテゴリに含まれる場合は、少なくとも1つの提案にresourceLinksを入れてください。URLはユーザー入力ではなく、resourceCatalogにあるURLだけを使ってください。",
     "JSON形式: {\"summary\":\"短い総括\",\"suggestions\":[{\"type\":\"quick|creative|deep\",\"title\":\"\",\"aim\":\"\",\"materials\":\"\",\"steps\":[\"\"],\"phrases\":[\"\"],\"skills\":[\"\"],\"evidenceTag\":\"Harvard型: 応答的な関わり\",\"evidence\":\"発達・教育上の背景を80字程度で\",\"observe\":\"親が見るポイントを1つ\",\"consult\":\"心配が続く場合の相談目安を柔らかく\",\"fallback\":\"\",\"resourceLinks\":[{\"title\":\"\",\"type\":\"動画|アプリ|サイト\",\"url\":\"\",\"note\":\"親向けの短い使い方\"}]}]}",
     "suggestionsは必ず3件で、quick, creative, deepを1件ずつ含めてください。"
   ].join("\n");
