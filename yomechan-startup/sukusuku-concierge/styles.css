@@ -195,6 +195,27 @@ h1 {
   margin-top: 12px;
 }
 
+.auth-alert {
+  border: 1px solid rgba(203, 100, 62, 0.28);
+  border-radius: 8px;
+  background: #fff7f1;
+  color: #7c3c22;
+  font-size: 13px;
+  line-height: 1.65;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.auth-alert strong {
+  display: block;
+  color: #633018;
+  margin-bottom: 4px;
+}
+
+.auth-alert p {
+  margin: 0;
+}
+
 .sync-guide {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

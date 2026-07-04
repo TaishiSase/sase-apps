@@ -38,6 +38,7 @@ const authSession = document.getElementById("authSession");
 const authStatus = document.getElementById("authStatus");
 const authLogout = document.getElementById("authLogout");
 const authSubmit = document.getElementById("authSubmit");
+const authAlert = document.getElementById("authAlert");
 const signupFields = document.getElementById("signupFields");
 const syncStatus = document.getElementById("syncStatus");
 const familyPanel = document.getElementById("familyPanel");
@@ -90,8 +91,15 @@ function setSyncStatus(text, mode = "local") {
   syncStatus.dataset.mode = mode;
 }
 
+function showAuthAlert(html = "") {
+  if (!authAlert) return;
+  authAlert.classList.toggle("hidden", !html);
+  authAlert.innerHTML = html;
+}
+
 function setAuthMode(mode) {
   authMode = mode;
+  showAuthAlert("");
   authForm.querySelectorAll("[data-auth-mode]").forEach((button) => {
     button.classList.toggle("active", button.dataset.authMode === mode);
   });
@@ -864,27 +872,34 @@ authForm.addEventListener("submit", async (event) => {
     const result = await db.auth.signUp({ email, password });
     if (result.error) {
       setSyncStatus("登録失敗", "local");
+      showAuthAlert("");
       alert(result.error.message);
       return;
     }
     session = result.data.session;
     currentUser = result.data.user || session?.user || null;
     if (!session) {
-      setSyncStatus("メール確認待ち", "local");
-      alert("確認メールが必要な設定です。メール確認後にログインしてください。");
+      setSyncStatus("Auth設定の確認が必要", "local");
+      showAuthAlert(`
+        <strong>新規登録は作成されましたが、Supabase側でメール確認がONです。</strong>
+        <p>家族内利用ではメール確認なしで使う想定です。Supabase Dashboard の Authentication → Providers → Email で「Confirm email」をOFFにしてください。OFFにした後、必要なら Authentication → Users からこのメールのユーザーを削除して、もう一度新規登録してください。</p>
+      `);
       return;
     }
+    showAuthAlert("");
     await createFamily(formData.get("familyName") || "佐瀬家", formData.get("relation") || "papa");
     setAuthMode("login");
   } else {
     const result = await db.auth.signInWithPassword({ email, password });
     if (result.error) {
       setSyncStatus("ログイン失敗", "local");
+      showAuthAlert("");
       alert(result.error.message);
       return;
     }
     session = result.data.session;
     currentUser = session.user;
+    showAuthAlert("");
   }
 
   await refreshAuthState();

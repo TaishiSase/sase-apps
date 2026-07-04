@@ -63,15 +63,16 @@
         </div>
         <button class="secondary-btn" type="submit" id="authSubmit">ログインして同期</button>
       </form>
+      <div class="auth-alert hidden" id="authAlert"></div>
       <div class="auth-session hidden" id="authSession">
         <p id="authStatus">ログイン中</p>
         <button class="secondary-btn" type="button" id="authLogout">ログアウト</button>
       </div>
-      <p class="auth-note">ログインすると、プロフィール、AI相談、提案、実施記録をSupabaseに保存します。</p>
+      <p class="auth-note">ログインすると、プロフィール、AI相談、提案、実施記録をSupabaseに保存します。家族内利用のため、新規登録はメール確認なしでそのまま使う想定です。</p>
       <div class="sync-guide">
         <div><strong>1</strong><span>初めての家族は「新規登録」で家庭IDを作成</span></div>
         <div><strong>2</strong><span>パパ/ママが家族設定から招待コードを発行</span></div>
-        <div><strong>3</strong><span>招待された人は同じメールで登録後、コードで参加</span></div>
+        <div><strong>3</strong><span>招待された人は登録/ログイン後、招待コードを入力して参加</span></div>
       </div>
     </section>
 
