@@ -567,7 +567,7 @@ async function saveSuggestionsToSupabase(payload, data) {
   const suggestionResult = await db
     .from("suggestions")
     .insert(rows)
-    .select("id, title, suggestion_type, aim, materials, steps, phrases, skills, fallback");
+    .select("id, title, suggestion_type, aim, materials, steps, phrases, skills, fallback, raw_response");
 
   if (suggestionResult.error) throw suggestionResult.error;
 
@@ -580,6 +580,9 @@ async function saveSuggestionsToSupabase(payload, data) {
     steps: row.steps || [],
     phrases: row.phrases || [],
     skills: row.skills || [],
+    evidence: row.raw_response?.evidence || "",
+    observe: row.raw_response?.observe || "",
+    consult: row.raw_response?.consult || "",
     fallback: row.fallback
   }));
 }
@@ -599,6 +602,9 @@ function fallbackSuggestions(payload) {
         steps: ["好きなものを1つ選ぶ", "名前や色を一緒に言う", "できたところを短くほめる"],
         phrases: ["それいいね、どうして選んだの？", "もう一回やってみる？"],
         skills: ["会話", "観察", "自己肯定感"],
+        evidence: "応答的なやりとりは、言葉と社会性の土台を育てるとされています。",
+        observe: "子どもが自分から見せる、指さす、もう一度求める反応を見る。",
+        consult: "言葉や反応の少なさが長く気になる時は、健診や小児科で相談を。",
         fallback: "集中が続かなければ、1問だけで終わって大丈夫。"
       },
       {
@@ -610,6 +616,9 @@ function fallbackSuggestions(payload) {
         steps: ["丸いものを探す", "柔らかいものを探す", "見つけたものを親に紹介する"],
         phrases: ["どこが丸いと思った？", "これはどんな触り心地？"],
         skills: ["運動", "語彙", "分類"],
+        evidence: "遊びを通じた探索は、身体感覚・語彙・分類する力を一緒に使えます。",
+        observe: "探す対象を自分で選べるか、親の言葉をまねるかを見る。",
+        consult: "運動や感覚面の心配が続く場合は、専門家に相談してください。",
         fallback: "難しければ親が先に1つ見つけて見本を見せる。"
       },
       {
@@ -621,6 +630,9 @@ function fallbackSuggestions(payload) {
         steps: ["なぜかな？を1つ決める", "親子で予想する", "試して結果を話す"],
         phrases: ["予想と同じだった？", "次は何を変えてみる？"],
         skills: ["科学", "思考力", "親子対話"],
+        evidence: "予想して試す遊びは、幼児期の探究心と実行機能を育てる足場になります。",
+        observe: "予想、比較、言葉で説明する様子を一つだけ見る。",
+        consult: "強い不安やこだわりで日常が難しい時は、専門家に相談してください。",
         fallback: "実験が難しい日は、絵本の中の不思議を一緒に探す。"
       }
     ]
@@ -637,6 +649,9 @@ function normalizeSuggestions(suggestions) {
     steps: Array.isArray(item.steps) ? item.steps : String(item.steps || "").split("\n").filter(Boolean),
     phrases: Array.isArray(item.phrases) ? item.phrases : String(item.phrases || "").split("\n").filter(Boolean),
     skills: Array.isArray(item.skills) ? item.skills : String(item.skills || "").split(/[、,\n]/).filter(Boolean),
+    evidence: item.evidence || "",
+    observe: item.observe || "",
+    consult: item.consult || "",
     fallback: item.fallback || ""
   }));
 }
@@ -666,6 +681,9 @@ function renderSuggestions(summary, suggestions) {
           ${listBox("手順", item.steps, true)}
           ${listBox("声かけ例", item.phrases)}
           ${listBox("伸びる力", item.skills)}
+          ${detailBox("発達・教育の背景", item.evidence)}
+          ${detailBox("見るポイント", item.observe)}
+          ${detailBox("相談目安", item.consult)}
           ${detailBox("うまくいかなかった時", item.fallback)}
         </div>
         <button class="log-button" type="button" data-log-id="${esc(item.id)}">この提案を記録する</button>

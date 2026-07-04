@@ -294,6 +294,28 @@ h1 {
   margin-bottom: 16px;
 }
 
+.evidence-note {
+  border: 1px solid rgba(59, 143, 92, 0.16);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 246, 216, 0.78), rgba(223, 246, 231, 0.72));
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.evidence-note strong {
+  display: block;
+  color: var(--green-deep);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.evidence-note p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+
 h2 {
   font-size: 22px;
   line-height: 1.25;
