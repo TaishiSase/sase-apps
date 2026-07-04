@@ -698,7 +698,7 @@ textarea:focus {
 
 .suggestion-card {
   display: grid;
-  gap: 14px;
+  gap: 0;
   border-left: 6px solid var(--green);
 }
 
@@ -715,6 +715,67 @@ textarea:focus {
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.suggestion-top::-webkit-details-marker,
+.mission-head::-webkit-details-marker {
+  display: none;
+}
+
+.card-actions,
+.mission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.card-actions {
+  align-items: flex-start;
+}
+
+.expand-hint {
+  border: 1px solid rgba(59, 143, 92, 0.22);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--green-deep);
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  padding: 6px 9px;
+}
+
+.suggestion-card[open] .expand-hint,
+.mission-card[open] .expand-hint {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.expand-hint::after {
+  content: "を開く";
+}
+
+.suggestion-card[open] .expand-hint::after,
+.mission-card[open] .expand-hint::after {
+  content: "を閉じる";
+}
+
+.card-preview {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 8px 0 0;
+}
+
+.card-detail,
+.mission-detail {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
 }
 
 .evidence-tag {
@@ -938,6 +999,8 @@ textarea:focus {
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
+  cursor: pointer;
+  list-style: none;
 }
 
 .mission-date {
@@ -962,6 +1025,8 @@ textarea:focus {
   font-weight: 800;
   min-height: 34px;
   padding: 0 12px;
+  position: relative;
+  z-index: 2;
 }
 
 .mission-check[aria-pressed="true"] {

@@ -962,28 +962,34 @@ function renderSuggestions(summary, suggestions) {
       <p>${esc(summary || "今のプロフィールと相談内容から、親子で試しやすい順に3案を作りました。")}</p>
     </article>
     ${normalized.map((item) => `
-      <article class="suggestion-card" data-kind="${esc(item.type)}">
-        <div class="suggestion-top">
+      <details class="suggestion-card" data-kind="${esc(item.type)}">
+        <summary class="suggestion-top">
           <div>
             <p class="suggestion-type">${esc(typeLabels[item.type] || "おすすめ案")}</p>
             <h3>${esc(item.title)}</h3>
+            ${item.aim ? `<p class="card-preview">${esc(item.aim)}</p>` : ""}
           </div>
-          ${item.evidenceTag ? `<span class="evidence-tag">${esc(item.evidenceTag)}</span>` : ""}
+          <div class="card-actions">
+            ${item.evidenceTag ? `<span class="evidence-tag">${esc(item.evidenceTag)}</span>` : ""}
+            <span class="expand-hint">詳細</span>
+          </div>
+        </summary>
+        <div class="card-detail">
+          <div class="detail-grid">
+            ${detailBox("ねらい", item.aim)}
+            ${detailBox("準備するもの", item.materials)}
+            ${listBox("手順", item.steps, true)}
+            ${listBox("声かけ例", item.phrases)}
+            ${listBox("伸びる力", item.skills)}
+            ${detailBox("発達・教育の背景", item.evidence)}
+            ${detailBox("見るポイント", item.observe)}
+            ${detailBox("相談目安", item.consult)}
+            ${resourceBox("おすすめ教材", item.resourceLinks)}
+            ${detailBox("うまくいかなかった時", item.fallback)}
+          </div>
+          <button class="log-button" type="button" data-log-id="${esc(item.id)}">この提案を記録する</button>
         </div>
-        <div class="detail-grid">
-          ${detailBox("ねらい", item.aim)}
-          ${detailBox("準備するもの", item.materials)}
-          ${listBox("手順", item.steps, true)}
-          ${listBox("声かけ例", item.phrases)}
-          ${listBox("伸びる力", item.skills)}
-          ${detailBox("発達・教育の背景", item.evidence)}
-          ${detailBox("見るポイント", item.observe)}
-          ${detailBox("相談目安", item.consult)}
-          ${resourceBox("おすすめ教材", item.resourceLinks)}
-          ${detailBox("うまくいかなかった時", item.fallback)}
-        </div>
-        <button class="log-button" type="button" data-log-id="${esc(item.id)}">この提案を記録する</button>
-      </article>
+      </details>
     `).join("")}
   `;
 }
@@ -1187,32 +1193,37 @@ function renderMissionCard(mission, done) {
   const date = mission.date ? `${mission.date.slice(5).replace("-", "/")}(${esc(mission.dayLabel || "")})` : "";
   const resource = normalizeResource(mission.resource);
   return `
-    <article class="mission-card ${done ? "done" : ""}">
-      <div class="mission-head">
+    <details class="mission-card ${done ? "done" : ""}">
+      <summary class="mission-head">
         <div>
           <span class="mission-date">${esc(date)}</span>
           <h4>${esc(mission.title)}</h4>
+          <p class="card-preview">${esc(mission.aim)}</p>
         </div>
-        <button class="mission-check" type="button" data-mission-id="${esc(mission.id)}" aria-pressed="${done ? "true" : "false"}">
-          ${done ? "達成" : "未達"}
-        </button>
-      </div>
+        <div class="mission-actions">
+          <button class="mission-check" type="button" data-mission-id="${esc(mission.id)}" aria-pressed="${done ? "true" : "false"}">
+            ${done ? "達成" : "未達"}
+          </button>
+          <span class="expand-hint">詳細</span>
+        </div>
+      </summary>
       <div class="mission-meta">
         <span>${esc(mission.category)}</span>
         <span>${esc(mission.duration)}</span>
         <span>${esc(mission.evidenceTag)}</span>
       </div>
-      <p>${esc(mission.aim)}</p>
-      <ul>${(mission.steps || []).map((step) => `<li>${esc(step)}</li>`).join("")}</ul>
-      <div class="success-line"><strong>達成条件</strong><span>${esc(mission.successCriteria)}</span></div>
-      ${mission.parentPhrase ? `<div class="success-line"><strong>声かけ</strong><span>${esc(mission.parentPhrase)}</span></div>` : ""}
-      ${resource.url ? `
-        <a class="mission-resource" href="${esc(resource.url)}" target="_blank" rel="noopener">
-          <strong>${esc(resource.title)}</strong>
-          <span>${esc(resource.type)} / ${esc(resource.note)}</span>
-        </a>
-      ` : ""}
-    </article>
+      <div class="mission-detail">
+        <ul>${(mission.steps || []).map((step) => `<li>${esc(step)}</li>`).join("")}</ul>
+        <div class="success-line"><strong>達成条件</strong><span>${esc(mission.successCriteria)}</span></div>
+        ${mission.parentPhrase ? `<div class="success-line"><strong>声かけ</strong><span>${esc(mission.parentPhrase)}</span></div>` : ""}
+        ${resource.url ? `
+          <a class="mission-resource" href="${esc(resource.url)}" target="_blank" rel="noopener">
+            <strong>${esc(resource.title)}</strong>
+            <span>${esc(resource.type)} / ${esc(resource.note)}</span>
+          </a>
+        ` : ""}
+      </div>
+    </details>
   `;
 }
 
@@ -1479,6 +1490,8 @@ plannerForm?.addEventListener("submit", async (event) => {
 plannerBoard?.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-mission-id]");
   if (!button || !state.currentPlan) return;
+  event.preventDefault();
+  event.stopPropagation();
   const missionId = button.dataset.missionId;
   const completed = getCompletedMissionIds();
   if (completed.has(missionId)) {
