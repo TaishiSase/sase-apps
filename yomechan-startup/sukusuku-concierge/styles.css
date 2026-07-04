@@ -104,6 +104,45 @@ h1 {
   margin: 16px 0 0;
 }
 
+.app-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  border: 1px solid rgba(75, 97, 80, 0.12);
+  border-radius: 8px;
+  background: rgba(248, 245, 234, 0.94);
+  backdrop-filter: blur(12px);
+  margin-bottom: 16px;
+  padding: 6px;
+}
+
+.app-tab {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--green-deep);
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 42px;
+}
+
+.app-tab.active {
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(72, 92, 67, 0.14);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: grid;
+  gap: 16px;
+}
+
 .workbench {
   display: grid;
   grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
@@ -111,9 +150,33 @@ h1 {
   align-items: start;
 }
 
-.profile-panel {
+.settings-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.consult-workbench {
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+}
+
+.consult-workbench .ask-panel,
+.consult-workbench .log-panel {
   grid-column: 1;
-  grid-row: 1 / span 3;
+}
+
+.consult-workbench .results,
+.consult-workbench .reflection-panel {
+  grid-column: 2;
+}
+
+.planner-workbench {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-panel {
+  grid-column: 1 / -1;
+  grid-row: auto;
 }
 
 .ask-panel,
@@ -517,6 +580,14 @@ textarea:focus {
   padding: 6px;
 }
 
+.segmented.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.segmented.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .segmented label,
 .feedback-grid label,
 .chip-grid label {
@@ -560,13 +631,25 @@ textarea:focus {
 }
 
 .chip-grid label.is-checked span {
-  border-color: rgba(59, 143, 92, 0.46);
+  border-color: rgba(39, 105, 70, 0.8);
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(59, 143, 92, 0.24);
+}
+
+.chip-grid label.is-checked span::before {
+  content: "✓";
+  margin-right: 5px;
 }
 
 .choice-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.choice-row.single {
+  grid-template-columns: 1fr;
 }
 
 .category-field {

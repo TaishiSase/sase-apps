@@ -24,6 +24,13 @@
       <p class="brand-copy">親の不安を、今日できる遊びと声かけに変える。</p>
     </header>
 
+    <nav class="app-tabs" aria-label="すくすくコンシェルジュの画面切り替え">
+      <button class="app-tab active" type="button" data-app-tab="settings">基本設定</button>
+      <button class="app-tab" type="button" data-app-tab="consult">今日の相談</button>
+      <button class="app-tab" type="button" data-app-tab="planner">週・月プラン</button>
+    </nav>
+
+    <section class="tab-panel active" id="settingsTab" data-tab-panel="settings">
     <section class="panel auth-panel" id="authPanel">
       <div class="panel-head">
         <div>
@@ -134,7 +141,7 @@
       </form>
     </section>
 
-    <section class="workbench">
+    <section class="settings-grid">
       <article class="panel profile-panel">
         <div class="panel-head">
           <div>
@@ -184,7 +191,11 @@
           <button class="primary-btn" type="submit">保存</button>
         </form>
       </article>
+    </section>
+    </section>
 
+    <section class="tab-panel" id="consultTab" data-tab-panel="consult">
+    <section class="workbench consult-workbench">
       <article class="panel ask-panel">
         <div class="panel-head">
           <div>
@@ -219,16 +230,15 @@
           <fieldset class="category-field">
             <legend>相談の目的</legend>
             <p class="field-help">今日すぐ使いたい内容を選びます。週/月の計画は下の「育ちのカレンダー」で作れます。</p>
-            <div class="segmented" role="radiogroup" aria-label="相談の目的">
+            <div class="segmented three" role="radiogroup" aria-label="相談の目的">
               <label><input type="radio" name="consultationType" value="today_action" checked><span>今日の遊び</span></label>
-              <label><input type="radio" name="consultationType" value="parenting_worry"><span>悩み相談</span></label>
-              <label><input type="radio" name="consultationType" value="phrasing"><span>声かけ</span></label>
-              <label><input type="radio" name="consultationType" value="reflection"><span>振り返り</span></label>
+              <label><input type="radio" name="consultationType" value="parenting_worry"><span>お悩み相談</span></label>
+              <label><input type="radio" name="consultationType" value="reflection"><span>最近の振り返り</span></label>
             </div>
           </fieldset>
 
-          <div class="choice-row">
-            <label>
+          <div class="choice-row ask-options">
+            <label id="durationField">
               <span>時間</span>
               <select name="durationType">
                 <option value="five_min">5分</option>
@@ -261,48 +271,6 @@
 
           <button class="primary-btn wide" type="submit" id="askButton">提案してもらう</button>
         </form>
-      </article>
-
-      <article class="panel planner-panel">
-        <div class="panel-head">
-          <div>
-            <p class="section-kicker">calendar mission</p>
-            <h2>育ちのカレンダー</h2>
-          </div>
-          <span class="status-pill soft" id="missionStatus">未作成</span>
-        </div>
-        <div class="planner-hero">
-          <div class="planner-illustration" aria-hidden="true">
-            <span>📅</span><span>🎵</span><span>🚀</span>
-          </div>
-          <p>その週や月にやることを、英語・運動・科学・音楽などのミッションに分けて作ります。終わったものをチェックすると達成状況が見えます。</p>
-        </div>
-        <form id="plannerForm" class="planner-form">
-          <div class="segmented" role="tablist" aria-label="プラン期間">
-            <label><input type="radio" name="planRange" value="week" checked><span>週プラン</span></label>
-            <label><input type="radio" name="planRange" value="month"><span>月プラン</span></label>
-          </div>
-          <div class="choice-row">
-            <label>
-              <span>開始日</span>
-              <input name="planStartDate" type="date">
-            </label>
-            <label>
-              <span>負荷</span>
-              <select name="planIntensity">
-                <option value="light">軽め</option>
-                <option value="balanced" selected>ちょうどよく</option>
-                <option value="rich">しっかり</option>
-              </select>
-            </label>
-          </div>
-          <label>
-            <span>今週/月の希望</span>
-            <textarea name="planMessage" rows="3" placeholder="英語の歌を増やしたい、週末は科学遊びをしたい、動画は短めがいい、など"></textarea>
-          </label>
-          <button class="primary-btn wide" type="submit" id="plannerButton">プランを作る</button>
-        </form>
-        <div id="plannerBoard" class="planner-board"></div>
       </article>
 
       <section class="results" id="resultsSection" aria-live="polite"></section>
@@ -346,6 +314,53 @@
         </div>
         <div id="reflectionContent" class="reflection"></div>
       </article>
+    </section>
+    </section>
+
+    <section class="tab-panel" id="plannerTab" data-tab-panel="planner">
+    <section class="planner-workbench">
+      <article class="panel planner-panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">calendar mission</p>
+            <h2>育ちのカレンダー</h2>
+          </div>
+          <span class="status-pill soft" id="missionStatus">未作成</span>
+        </div>
+        <div class="planner-hero">
+          <div class="planner-illustration" aria-hidden="true">
+            <span>📅</span><span>🎵</span><span>🚀</span>
+          </div>
+          <p>その週や月にやることを、英語・運動・科学・音楽などのミッションに分けて作ります。終わったものをチェックすると達成状況が見えます。</p>
+        </div>
+        <form id="plannerForm" class="planner-form">
+          <div class="segmented two" role="radiogroup" aria-label="プラン期間">
+            <label><input type="radio" name="planRange" value="week" checked><span>週プラン</span></label>
+            <label><input type="radio" name="planRange" value="month"><span>月プラン</span></label>
+          </div>
+          <div class="choice-row">
+            <label>
+              <span>開始日</span>
+              <input name="planStartDate" type="date">
+            </label>
+            <label>
+              <span>負荷</span>
+              <select name="planIntensity">
+                <option value="light">軽め</option>
+                <option value="balanced" selected>ちょうどよく</option>
+                <option value="rich">しっかり</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>今週/月の希望</span>
+            <textarea name="planMessage" rows="3" placeholder="英語の歌を増やしたい、週末は科学遊びをしたい、動画は短めがいい、など"></textarea>
+          </label>
+          <button class="primary-btn wide" type="submit" id="plannerButton">プランを作る</button>
+        </form>
+        <div id="plannerBoard" class="planner-board"></div>
+      </article>
+    </section>
     </section>
   </main>
 

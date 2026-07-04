@@ -87,6 +87,8 @@ let activeChild = null;
 let activeProfileId = null;
 
 const authPanel = document.getElementById("authPanel");
+const appTabs = Array.from(document.querySelectorAll("[data-app-tab]"));
+const tabPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
 const authForm = document.getElementById("authForm");
 const authSession = document.getElementById("authSession");
 const authStatus = document.getElementById("authStatus");
@@ -106,6 +108,7 @@ const profileForm = document.getElementById("profileForm");
 const photoInput = document.getElementById("photoInput");
 const childPhotoPreview = document.getElementById("childPhotoPreview");
 const askForm = document.getElementById("askForm");
+const durationField = document.getElementById("durationField");
 const logForm = document.getElementById("logForm");
 const resultsSection = document.getElementById("resultsSection");
 const reflectionContent = document.getElementById("reflectionContent");
@@ -252,6 +255,22 @@ function syncChoiceState(root = document) {
   });
 }
 
+function switchAppTab(tabName) {
+  appTabs.forEach((button) => {
+    button.classList.toggle("active", button.dataset.appTab === tabName);
+  });
+  tabPanels.forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.tabPanel === tabName);
+  });
+}
+
+function updateConsultationControls() {
+  const type = askForm?.elements.consultationType?.value || "today_action";
+  const needsDuration = type === "today_action";
+  durationField?.classList.toggle("hidden", !needsDuration);
+  durationField?.parentElement?.classList.toggle("single", !needsDuration);
+}
+
 function fillProfileForm() {
   const profile = state.profile || {};
   Object.entries(profile).forEach(([key, value]) => {
@@ -315,10 +334,11 @@ function getCompletedMissionIds(plan = state.currentPlan) {
 
 function buildPayload(formData) {
   const selectedCategories = getSelectedCategories();
+  const consultationType = formData.get("consultationType") || "today_action";
   return {
     profile: state.profile,
-    consultationType: formData.get("consultationType"),
-    durationType: formData.get("durationType"),
+    consultationType,
+    durationType: consultationType === "today_action" ? formData.get("durationType") : "not_needed",
     advisorTone: formData.get("advisorTone"),
     categories: selectedCategories,
     categoryLabels: getCategoryLabels(selectedCategories),
@@ -1242,6 +1262,12 @@ authForm.addEventListener("click", (event) => {
   if (button) setAuthMode(button.dataset.authMode);
 });
 
+appTabs.forEach((button) => {
+  button.addEventListener("click", () => {
+    switchAppTab(button.dataset.appTab);
+  });
+});
+
 authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!db) return;
@@ -1415,6 +1441,7 @@ askForm.addEventListener("submit", async (event) => {
 askForm.addEventListener("change", (event) => {
   if (event.target.matches('input[type="checkbox"], input[type="radio"]')) {
     syncChoiceState(askForm);
+    updateConsultationControls();
   }
 });
 
@@ -1508,6 +1535,8 @@ logForm.addEventListener("submit", async (event) => {
 
 renderCategoryChoices();
 if (plannerForm?.elements.planStartDate) plannerForm.elements.planStartDate.value = getWeekStart();
+syncChoiceState();
+updateConsultationControls();
 fillProfileForm();
 renderLogHistory();
 renderReflection();
