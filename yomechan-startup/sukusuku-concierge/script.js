@@ -85,6 +85,7 @@ let activeFamily = null;
 let activeMember = null;
 let activeChild = null;
 let activeProfileId = null;
+let familyChildren = [];
 
 const authPanel = document.getElementById("authPanel");
 const appTabs = Array.from(document.querySelectorAll("[data-app-tab]"));
@@ -107,6 +108,8 @@ const inviteResult = document.getElementById("inviteResult");
 const profileForm = document.getElementById("profileForm");
 const photoInput = document.getElementById("photoInput");
 const childPhotoPreview = document.getElementById("childPhotoPreview");
+const childSelect = document.getElementById("childSelect");
+const newChildButton = document.getElementById("newChildButton");
 const askForm = document.getElementById("askForm");
 const durationField = document.getElementById("durationField");
 const logForm = document.getElementById("logForm");
@@ -318,6 +321,9 @@ function updateConsultationControls() {
 
 function fillProfileForm() {
   const profile = state.profile || {};
+  ["name", "birthDate", "gender", "likes", "concerns", "goals"].forEach((key) => {
+    if (profileForm.elements[key]) profileForm.elements[key].value = "";
+  });
   Object.entries(profile).forEach(([key, value]) => {
     if (profileForm.elements[key]) {
       profileForm.elements[key].value = value || "";
@@ -329,11 +335,52 @@ function fillProfileForm() {
 
 function updateProfileStatus() {
   const profile = state.profile || {};
-  if (profile.name && profile.birthDate) {
+  if (!activeChild && activeFamily) {
+    profileStatus.textContent = "新規または未登録";
+  } else if (profile.name && profile.birthDate) {
     profileStatus.textContent = `${profile.name} / ${getAgeText(profile.birthDate)}`;
   } else {
     profileStatus.textContent = "未保存";
   }
+}
+
+function rememberActiveChild(childId) {
+  if (!activeFamily || !childId) return;
+  state.activeChildByFamily = {
+    ...(state.activeChildByFamily || {}),
+    [activeFamily.id]: childId
+  };
+  saveState();
+}
+
+function renderChildSwitcher() {
+  if (!childSelect) return;
+  if (!familyChildren.length) {
+    childSelect.innerHTML = '<option value="">まだ登録されていません</option>';
+    childSelect.disabled = true;
+    return;
+  }
+
+  childSelect.disabled = false;
+  const newOption = activeChild ? "" : '<option value="">新しい子を入力中</option>';
+  childSelect.innerHTML = newOption + familyChildren.map((child) => `
+    <option value="${esc(child.id)}">${esc(child.name || "名前未入力")} / ${esc(getAgeText(child.birth_date))}</option>
+  `).join("");
+  if (activeChild?.id) childSelect.value = activeChild.id;
+}
+
+function resetActiveChildProfile() {
+  activeChild = null;
+  activeProfileId = null;
+  state.profile = {};
+  state.logs = [];
+  state.currentPlan = null;
+  saveState();
+  fillProfileForm();
+  renderChildSwitcher();
+  renderLogHistory();
+  renderReflection();
+  renderPlanner();
 }
 
 function getSelectedCategories() {
@@ -560,6 +607,8 @@ function updateEditAccess() {
   plannerForm?.querySelectorAll("input, select, textarea, button").forEach((element) => {
     element.disabled = !canEdit;
   });
+  if (newChildButton) newChildButton.disabled = !canEdit;
+  if (childSelect) childSelect.disabled = !familyChildren.length;
   if (!canEdit) {
     askButton.textContent = "閲覧のみ";
     if (plannerButton) plannerButton.textContent = "閲覧のみ";
@@ -639,20 +688,44 @@ async function joinFamilyByToken(token) {
 }
 
 async function loadFirstChild() {
-  if (!activeFamily) return;
+  if (!activeFamily) {
+    familyChildren = [];
+    resetActiveChildProfile();
+    return;
+  }
+
   const childResult = await db
     .from("children")
     .select("id, name, birth_date, gender")
     .eq("family_id", activeFamily.id)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
 
   if (childResult.error) throw childResult.error;
-  activeChild = childResult.data;
+  familyChildren = childResult.data || [];
+  renderChildSwitcher();
 
-  if (!activeChild) return;
+  const rememberedId = state.activeChildByFamily?.[activeFamily.id];
+  const selectedChild = familyChildren.find((child) => child.id === rememberedId) || familyChildren[0];
 
+  if (!selectedChild) {
+    resetActiveChildProfile();
+    updateEditAccess();
+    return;
+  }
+
+  await loadChildProfile(selectedChild.id);
+  updateEditAccess();
+}
+
+async function loadChildProfile(childId) {
+  const selectedChild = familyChildren.find((child) => child.id === childId);
+  if (!selectedChild) {
+    resetActiveChildProfile();
+    return;
+  }
+
+  activeChild = selectedChild;
+  rememberActiveChild(activeChild.id);
   const profileResult = await db
     .from("child_profiles")
     .select("id, likes, concerns, parent_goals, photo_data")
@@ -673,6 +746,8 @@ async function loadFirstChild() {
   };
   saveState();
   fillProfileForm();
+  renderChildSwitcher();
+  updateEditAccess();
 }
 
 async function saveProfileToSupabase(profile) {
@@ -722,6 +797,8 @@ async function saveProfileToSupabase(profile) {
 
   if (profileResult.error) throw profileResult.error;
   activeProfileId = profileResult.data.id;
+  rememberActiveChild(activeChild.id);
+  await loadFirstChild();
   setSyncStatus("同期済み", "online");
 }
 
@@ -860,6 +937,9 @@ async function loadCurrentPlan() {
       ...result.data.plan_json,
       id: result.data.id
     }, { startDate: result.data.plan_json.startDate || result.data.week_start });
+    saveState();
+  } else {
+    state.currentPlan = null;
     saveState();
   }
   renderPlanner();
@@ -1132,7 +1212,13 @@ async function saveLogToSupabase(log) {
 }
 
 async function loadRecentLogs() {
-  if (!db || !activeFamily || !activeChild) return;
+  if (!db || !activeFamily || !activeChild) {
+    state.logs = [];
+    saveState();
+    renderLogHistory();
+    renderReflection();
+    return;
+  }
   const result = await db
     .from("activity_logs")
     .select("id, suggestion_id, reaction, parent_note, want_repeat, logged_at, suggestions(title)")
@@ -1416,6 +1502,7 @@ authLogout.addEventListener("click", async () => {
   activeMember = null;
   activeChild = null;
   activeProfileId = null;
+  familyChildren = [];
   await refreshAuthState();
 });
 
@@ -1437,6 +1524,25 @@ createFamilyForm.addEventListener("submit", async (event) => {
     createFamilyButton.disabled = false;
     createFamilyButton.textContent = "このアカウントで家庭IDを作る";
   }
+});
+
+childSelect?.addEventListener("change", async () => {
+  if (!childSelect.value) return;
+  try {
+    await loadChildProfile(childSelect.value);
+    await loadRecentLogs();
+    await loadCurrentPlan();
+    showToast("表示する子どもを切り替えました。");
+  } catch (error) {
+    console.error(error);
+    alert(`子どもの切り替えに失敗しました: ${error.message}`);
+  }
+});
+
+newChildButton?.addEventListener("click", () => {
+  resetActiveChildProfile();
+  profileForm.elements.name?.focus();
+  showToast("新しい子どもプロフィールを入力してください。");
 });
 
 joinFamilyForm.addEventListener("submit", async (event) => {

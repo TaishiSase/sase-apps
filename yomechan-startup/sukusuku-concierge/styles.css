@@ -531,6 +531,14 @@ h2 {
   gap: 12px;
 }
 
+.child-switcher {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
 label,
 fieldset {
   display: grid;
@@ -1364,8 +1372,8 @@ textarea:focus {
     grid-template-columns: 1fr 1fr;
   }
 
-  .signup-fields,
   .photo-uploader,
+  .child-switcher,
   .family-summary,
   .planner-hero,
   .mission-summary {
