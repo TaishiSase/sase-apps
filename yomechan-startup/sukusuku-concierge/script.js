@@ -111,6 +111,9 @@ const childPhotoPreview = document.getElementById("childPhotoPreview");
 const childSelect = document.getElementById("childSelect");
 const newChildButton = document.getElementById("newChildButton");
 const deleteChildButton = document.getElementById("deleteChildButton");
+const headerChildPhoto = document.getElementById("headerChildPhoto");
+const headerChildName = document.getElementById("headerChildName");
+const headerChildMeta = document.getElementById("headerChildMeta");
 const askForm = document.getElementById("askForm");
 const durationField = document.getElementById("durationField");
 const logForm = document.getElementById("logForm");
@@ -252,6 +255,23 @@ function renderProfilePhoto() {
     childPhotoPreview.innerHTML = `<img src="${esc(photoData)}" alt="子どもの顔写真">`;
   } else {
     childPhotoPreview.textContent = "🌱";
+  }
+  renderHeaderProfile();
+}
+
+function renderHeaderProfile() {
+  const profile = state.profile || {};
+  const photoData = profile.photoData;
+  if (headerChildPhoto) {
+    headerChildPhoto.innerHTML = photoData
+      ? `<img src="${esc(photoData)}" alt="子どもの顔写真">`
+      : '<img src="/yomechan-startup/sukusuku-concierge/assets/icon-192.png" alt="">';
+  }
+  if (headerChildName) {
+    headerChildName.textContent = profile.name ? `${profile.name} ${getAgeText(profile.birthDate)}` : "Hagumi";
+  }
+  if (headerChildMeta) {
+    headerChildMeta.textContent = profile.name ? "成長の記録 ›" : "きょう、なにしよう。";
   }
 }
 
@@ -1649,6 +1669,17 @@ appTabs.forEach((button) => {
   button.addEventListener("click", () => {
     switchAppTab(button.dataset.appTab);
   });
+});
+
+document.querySelectorAll("[data-jump-tab]").forEach((button) => {
+  button.addEventListener("click", () => {
+    switchAppTab(button.dataset.jumpTab);
+    document.querySelector(".app-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+});
+
+document.querySelector(".bell-button")?.addEventListener("click", () => {
+  showToast("今のところ新しいお知らせはありません。");
 });
 
 authForm.addEventListener("submit", async (event) => {
