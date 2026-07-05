@@ -199,6 +199,16 @@ button {
   text-transform: uppercase;
 }
 
+.brand-hero .brand-kicker {
+  color: #6f4a26;
+  font-size: clamp(18px, 4vw, 24px);
+  letter-spacing: 0;
+  line-height: 1.25;
+  margin-bottom: 8px;
+  text-transform: none;
+  white-space: nowrap;
+}
+
 h1,
 h2,
 p {
@@ -207,7 +217,8 @@ p {
 
 h1 {
   color: #5b3518;
-  font-size: clamp(36px, 8vw, 56px);
+  font-size: clamp(50px, 12vw, 82px);
+  font-weight: 800;
   line-height: 1.08;
   letter-spacing: 0;
   margin-bottom: 0;
@@ -1703,17 +1714,25 @@ textarea:focus {
   }
 
   .brand-hero {
-    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    grid-template-columns: 30px minmax(0, 1fr) 30px;
     gap: 6px;
     margin-bottom: 20px;
   }
 
   .hero-symbol {
-    font-size: 31px;
+    font-size: 26px;
   }
 
   .leaf-symbol {
-    font-size: 38px;
+    font-size: 32px;
+  }
+
+  .brand-hero .brand-kicker {
+    font-size: clamp(17px, 5vw, 20px);
+  }
+
+  h1 {
+    font-size: clamp(48px, 15vw, 60px);
   }
 
   .today-plan-card {
