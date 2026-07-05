@@ -824,6 +824,15 @@ async function deleteActiveChild() {
   const confirmed = window.confirm(`${childName} のプロフィールを削除します。\n相談、記録、週/月プランも一緒に削除されます。よろしいですか？`);
   if (!confirmed) return false;
 
+  const finalInput = window.prompt(
+    `最終確認です。\n\n削除すると、${childName} のプロフィール、相談、実施記録、週/月プランは元に戻せません。\n\n削除する場合は、確認のため「${childName}」と入力してください。`
+  );
+  if (finalInput === null) return false;
+  if (finalInput.trim() !== childName) {
+    alert("入力された名前が一致しないため、削除を中止しました。");
+    return false;
+  }
+
   const deletedChildId = activeChild.id;
   const result = await db
     .from("children")
