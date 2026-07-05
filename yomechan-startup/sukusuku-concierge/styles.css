@@ -255,6 +255,7 @@ h1 {
   font-size: clamp(22px, 4vw, 30px);
   line-height: 1.45;
   margin: 0;
+  white-space: nowrap;
 }
 
 .today-plan-copy p {
@@ -1738,6 +1739,10 @@ textarea:focus {
   .today-plan-card {
     border-radius: 22px;
     padding: 20px;
+  }
+
+  .today-plan-copy h2 {
+    font-size: clamp(16px, 4.8vw, 20px);
   }
 
   .plan-cta {
