@@ -183,9 +183,9 @@ function showToast(message, type = "success") {
 }
 
 function buildInviteMessage(invite) {
-  const appUrl = `${location.origin}/yomechan-startup/sukusuku-concierge`;
+  const appUrl = `${location.origin}/hagumi/`;
   return [
-    "すくすくコンシェルジュの家族招待です。",
+    "Hagumi「きょう、なにしよう。」の家族招待です。",
     "",
     `ログインメール: ${invite.email}`,
     `招待コード: ${invite.token}`,
@@ -1796,7 +1796,7 @@ inviteFamilyForm.addEventListener("submit", async (event) => {
       <div class="invite-share-box">${esc(message)}</div>
       <div class="invite-actions">
         <button class="secondary-btn" type="button" data-copy-invite>招待文をコピー</button>
-        <a class="secondary-link-btn" href="mailto:${encodeURIComponent(invite.email)}?subject=${encodeURIComponent("すくすくコンシェルジュ招待")}&body=${encodeURIComponent(message)}">メールアプリで開く</a>
+        <a class="secondary-link-btn" href="mailto:${encodeURIComponent(invite.email)}?subject=${encodeURIComponent("Hagumi招待")}&body=${encodeURIComponent(message)}">メールアプリで開く</a>
       </div>
     `;
     inviteFamilyForm.reset();
