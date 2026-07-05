@@ -86,9 +86,18 @@
         </div>
         <p id="familySummaryText">家族設定は、家庭IDの作成、招待コードでの参加、家族の招待を行う場所です。</p>
       </div>
-      <form id="createFamilyForm" class="family-form create-family-form">
+      <form id="joinFamilyForm" class="family-form create-family-form">
+        <h3>招待コードで参加</h3>
+        <p>パパなど招待された人はこちらです。まず自分本人のメールで家族データ同期に登録/ログインしてから、ママから共有された招待コードを入れます。</p>
+        <label>
+          <span>招待コード</span>
+          <input name="inviteToken" type="text" placeholder="例: ABC123" autocomplete="off">
+        </label>
+        <button class="secondary-btn" type="submit">この家庭IDに参加する</button>
+      </form>
+      <form id="createFamilyForm" class="family-form">
         <h3>家庭IDを作る</h3>
-        <p>最初に登録した人が家庭IDを作ります。ママのアドレスで作る場合は、あなたの続柄を「ママ」にしてください。</p>
+        <p>最初に始める人だけここを使います。すでに家族から招待コードをもらっている人は、上の「招待コードで参加」を使ってください。</p>
         <div class="choice-row">
           <label>
             <span>家族名</span>
@@ -106,15 +115,6 @@
           </label>
         </div>
         <button class="primary-btn" type="submit" id="createFamilyButton">このアカウントで家庭IDを作る</button>
-      </form>
-      <form id="joinFamilyForm" class="family-form">
-        <h3>招待コードで参加</h3>
-        <p>招待された人は、まず自分本人のメールで家族データ同期に登録/ログインしてから、このコードを入れます。招待されたメールとログイン中のメールが一致している必要があります。</p>
-        <label>
-          <span>招待コード</span>
-          <input name="inviteToken" type="text" placeholder="例: ABC123" autocomplete="off">
-        </label>
-        <button class="secondary-btn" type="submit">家族に参加する</button>
       </form>
       <form id="inviteFamilyForm" class="family-form hidden">
         <h3>家族を招待</h3>

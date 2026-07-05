@@ -536,7 +536,7 @@ function renderFamilyPanel() {
 
   if (!activeFamily) {
     familyRoleStatus.textContent = "家族未設定";
-    familySummaryText.textContent = "新しく家庭IDを作るか、家族から共有された招待コードで参加してください。";
+    familySummaryText.textContent = "招待された人は下の「招待コードで参加」にコードを入れます。最初に始める人だけ家庭IDを作ってください。";
     updateEditAccess();
     return;
   }
