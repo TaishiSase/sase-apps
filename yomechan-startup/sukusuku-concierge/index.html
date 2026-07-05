@@ -45,29 +45,13 @@
           <button type="button" class="auth-tab" data-auth-mode="signup">新規登録</button>
         </div>
         <label>
-          <span>メール</span>
-          <input name="email" type="email" autocomplete="email" placeholder="taish.dengel@gmail.com">
+          <span>あなた本人のメール</span>
+          <input name="email" type="email" autocomplete="email" placeholder="mama@example.com / papa@example.com">
         </label>
         <label>
-          <span>パスワード</span>
-          <input name="password" type="password" autocomplete="current-password" placeholder="Supabase Authのパスワード">
+          <span>あなた本人用のパスワード</span>
+          <input name="password" type="password" autocomplete="current-password" placeholder="この人専用のパスワード">
         </label>
-        <div class="signup-fields hidden" id="signupFields">
-          <label>
-            <span>家族名</span>
-            <input name="familyName" type="text" placeholder="佐瀬家">
-          </label>
-          <label>
-            <span>あなたの役割</span>
-            <select name="relation">
-              <option value="papa">パパ</option>
-              <option value="mama">ママ</option>
-              <option value="grandparent">祖父母</option>
-              <option value="sibling">兄弟姉妹</option>
-              <option value="relative">その他親族</option>
-            </select>
-          </label>
-        </div>
         <button class="secondary-btn" type="submit" id="authSubmit">ログインして同期</button>
       </form>
       <div class="auth-alert hidden" id="authAlert"></div>
@@ -76,10 +60,15 @@
         <button class="secondary-btn" type="button" id="authLogout">ログアウト</button>
       </div>
       <p class="auth-note">家族データ同期は、メールとパスワードでこの端末を同期用アカウントにつなぐ場所です。ログインすると、プロフィール、AI相談、提案、実施記録をSupabaseに保存します。</p>
-      <div class="sync-guide">
-        <div><strong>1</strong><span>最初の人は登録/ログイン後、家族設定で家庭IDを作成</span></div>
-        <div><strong>2</strong><span>パパ/ママを増やす時は招待コードを作ってLINEやメール本文で共有</span></div>
-        <div><strong>3</strong><span>招待された人は同じメールで登録/ログイン後、コードを入力して参加</span></div>
+      <div class="beginner-guide">
+        <div>
+          <strong>最初に始める人</strong>
+          <span>例: ママ。自分のメールで新規登録してから、下の家族設定で家庭IDを作ります。</span>
+        </div>
+        <div>
+          <strong>招待された人</strong>
+          <span>例: パパ。ママのメールではなく、パパ本人のメールで新規登録/ログインしてから、招待コードで参加します。</span>
+        </div>
       </div>
     </section>
 
@@ -120,7 +109,7 @@
       </form>
       <form id="joinFamilyForm" class="family-form">
         <h3>招待コードで参加</h3>
-        <p>家族から共有されたコードを入れると、その家庭IDに参加できます。</p>
+        <p>招待された人は、まず自分本人のメールで家族データ同期に登録/ログインしてから、このコードを入れます。招待されたメールとログイン中のメールが一致している必要があります。</p>
         <label>
           <span>招待コード</span>
           <input name="inviteToken" type="text" placeholder="例: ABC123" autocomplete="off">
@@ -145,8 +134,8 @@
           <label>
             <span>続柄</span>
             <select name="inviteRelation">
-              <option value="mama">ママ</option>
               <option value="papa">パパ</option>
+              <option value="mama">ママ</option>
               <option value="grandparent">祖父母</option>
               <option value="sibling">兄弟姉妹</option>
               <option value="relative">その他親族</option>

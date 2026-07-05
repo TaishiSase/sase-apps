@@ -287,6 +287,13 @@ h1 {
   margin-top: 14px;
 }
 
+.beginner-guide {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
 .sync-guide div {
   display: flex;
   align-items: flex-start;
@@ -294,6 +301,20 @@ h1 {
   border-radius: 8px;
   background: rgba(246, 248, 238, 0.88);
   padding: 10px;
+}
+
+.beginner-guide div {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(45, 96, 63, 0.14);
+  border-radius: 8px;
+  background: rgba(246, 248, 238, 0.9);
+  padding: 12px;
+}
+
+.beginner-guide strong {
+  color: var(--green-deep);
+  font-size: 14px;
 }
 
 .sync-guide strong {
@@ -308,6 +329,7 @@ h1 {
 }
 
 .sync-guide span,
+.beginner-guide span,
 .family-form p,
 .family-summary p {
   color: var(--muted);
@@ -1295,6 +1317,7 @@ textarea:focus {
 @media (max-width: 820px) {
   .workbench,
   .detail-grid,
+  .beginner-guide,
   .sync-guide {
     grid-template-columns: 1fr;
   }

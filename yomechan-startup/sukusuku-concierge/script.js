@@ -95,7 +95,6 @@ const authStatus = document.getElementById("authStatus");
 const authLogout = document.getElementById("authLogout");
 const authSubmit = document.getElementById("authSubmit");
 const authAlert = document.getElementById("authAlert");
-const signupFields = document.getElementById("signupFields");
 const syncStatus = document.getElementById("syncStatus");
 const familyPanel = document.getElementById("familyPanel");
 const familyRoleStatus = document.getElementById("familyRoleStatus");
@@ -212,8 +211,7 @@ function setAuthMode(mode) {
   authForm.querySelectorAll("[data-auth-mode]").forEach((button) => {
     button.classList.toggle("active", button.dataset.authMode === mode);
   });
-  signupFields.classList.toggle("hidden", mode !== "signup");
-  authSubmit.textContent = mode === "signup" ? "新規登録して家族を作る" : "ログインして同期";
+  authSubmit.textContent = mode === "signup" ? "新規登録して同期を始める" : "ログインして同期";
 }
 
 function roleLabel(role) {
@@ -1391,8 +1389,7 @@ authForm.addEventListener("submit", async (event) => {
     }
     await ensureFreshUser();
     showAuthAlert("");
-    await createFamily(formData.get("familyName") || "佐瀬家", formData.get("relation") || "papa");
-    showToast("新規登録と家庭IDの作成が完了しました。");
+    showToast("新規登録が完了しました。次に家族設定で家庭IDを作るか、招待コードで参加してください。");
     setAuthMode("login");
   } else {
     const result = await db.auth.signInWithPassword({ email, password });
