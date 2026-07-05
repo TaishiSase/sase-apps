@@ -100,6 +100,7 @@ const syncStatus = document.getElementById("syncStatus");
 const familyPanel = document.getElementById("familyPanel");
 const familyRoleStatus = document.getElementById("familyRoleStatus");
 const familySummaryText = document.getElementById("familySummaryText");
+const createFamilyForm = document.getElementById("createFamilyForm");
 const createFamilyButton = document.getElementById("createFamilyButton");
 const joinFamilyForm = document.getElementById("joinFamilyForm");
 const inviteFamilyForm = document.getElementById("inviteFamilyForm");
@@ -170,6 +171,39 @@ function showToast(message, type = "success") {
     toast.classList.remove("show");
     window.setTimeout(() => toast.remove(), 240);
   }, 3200);
+}
+
+function buildInviteMessage(invite) {
+  const appUrl = `${location.origin}/yomechan-startup/sukusuku-concierge`;
+  return [
+    "すくすくコンシェルジュの家族招待です。",
+    "",
+    `ログインメール: ${invite.email}`,
+    `招待コード: ${invite.token}`,
+    "",
+    "使い方:",
+    "1. 下のURLを開く",
+    "2. 上のメールアドレスで新規登録またはログイン",
+    "3. 基本設定の「招待コードで参加」にコードを入力",
+    "",
+    appUrl
+  ].join("\n");
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  textarea.remove();
 }
 
 function setAuthMode(mode) {
@@ -498,7 +532,7 @@ function renderFamilyPanel() {
 
   familyPanel.classList.remove("hidden");
   const isParent = activeMember?.role === "parent";
-  createFamilyButton.classList.toggle("hidden", Boolean(activeFamily));
+  createFamilyForm.classList.toggle("hidden", Boolean(activeFamily));
   inviteFamilyForm.classList.toggle("hidden", !activeFamily || !isParent);
   joinFamilyForm.classList.toggle("hidden", Boolean(activeFamily));
 
@@ -1388,15 +1422,23 @@ authLogout.addEventListener("click", async () => {
   await refreshAuthState();
 });
 
-createFamilyButton.addEventListener("click", async () => {
+createFamilyForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(createFamilyForm);
   try {
-    await createFamily("佐瀬家", "papa");
+    createFamilyButton.disabled = true;
+    createFamilyButton.textContent = "作成中...";
+    await createFamily(formData.get("familyName") || "佐瀬家", formData.get("relation") || "mama");
+    createFamilyForm.reset();
     setSyncStatus("同期済み", "online");
     await refreshAuthState();
     showToast("家庭IDを作成しました。");
   } catch (error) {
     console.error(error);
     alert(`家族作成に失敗しました: ${toUserFacingError(error)}`);
+  } finally {
+    createFamilyButton.disabled = false;
+    createFamilyButton.textContent = "このアカウントで家庭IDを作る";
   }
 });
 
@@ -1419,16 +1461,35 @@ inviteFamilyForm.addEventListener("submit", async (event) => {
   const formData = new FormData(inviteFamilyForm);
   try {
     const invite = await createInvitation(formData);
+    const message = buildInviteMessage(invite);
     inviteResult.classList.remove("hidden");
     inviteResult.innerHTML = `
       <strong>招待コード: ${esc(invite.token)}</strong>
-      <p>${esc(invite.email)} に共有してください。同じメールで登録/ログイン後、このコードを入力すると参加できます。</p>
+      <p>${esc(invite.email)} 宛の招待コードを作りました。メールは自動送信されないので、下の文面をコピーしてLINEやメール本文で共有してください。</p>
+      <div class="invite-share-box">${esc(message)}</div>
+      <div class="invite-actions">
+        <button class="secondary-btn" type="button" data-copy-invite>招待文をコピー</button>
+        <a class="secondary-link-btn" href="mailto:${encodeURIComponent(invite.email)}?subject=${encodeURIComponent("すくすくコンシェルジュ招待")}&body=${encodeURIComponent(message)}">メールアプリで開く</a>
+      </div>
     `;
     inviteFamilyForm.reset();
     showToast("招待コードを作成しました。");
   } catch (error) {
     console.error(error);
     alert(`招待コード作成に失敗しました: ${error.message}`);
+  }
+});
+
+inviteResult.addEventListener("click", async (event) => {
+  const copyButton = event.target.closest("[data-copy-invite]");
+  if (!copyButton) return;
+  const text = inviteResult.querySelector(".invite-share-box")?.textContent || "";
+  try {
+    await copyText(text);
+    showToast("招待文をコピーしました。");
+  } catch (error) {
+    console.error(error);
+    alert("コピーに失敗しました。表示された招待文を手動でコピーしてください。");
   }
 });
 

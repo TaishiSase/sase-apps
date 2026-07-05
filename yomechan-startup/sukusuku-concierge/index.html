@@ -77,9 +77,9 @@
       </div>
       <p class="auth-note">家族データ同期は、メールとパスワードでこの端末を同期用アカウントにつなぐ場所です。ログインすると、プロフィール、AI相談、提案、実施記録をSupabaseに保存します。</p>
       <div class="sync-guide">
-        <div><strong>1</strong><span>最初の人は「新規登録」またはログイン後に、下の家族設定で家庭IDを作成</span></div>
-        <div><strong>2</strong><span>パパ/ママが家族設定から招待コードを発行</span></div>
-        <div><strong>3</strong><span>招待された人は登録/ログイン後、招待コードを入力して参加</span></div>
+        <div><strong>1</strong><span>最初の人は登録/ログイン後、家族設定で家庭IDを作成</span></div>
+        <div><strong>2</strong><span>パパ/ママを増やす時は招待コードを作ってLINEやメール本文で共有</span></div>
+        <div><strong>3</strong><span>招待された人は同じメールで登録/ログイン後、コードを入力して参加</span></div>
       </div>
     </section>
 
@@ -97,9 +97,27 @@
         </div>
         <p id="familySummaryText">家族設定は、家庭IDの作成、招待コードでの参加、家族の招待を行う場所です。</p>
       </div>
-      <div class="family-actions">
-        <button class="primary-btn" type="button" id="createFamilyButton">このアカウントで家庭IDを作る</button>
-      </div>
+      <form id="createFamilyForm" class="family-form create-family-form">
+        <h3>家庭IDを作る</h3>
+        <p>最初に登録した人が家庭IDを作ります。ママのアドレスで作る場合は、あなたの続柄を「ママ」にしてください。</p>
+        <div class="choice-row">
+          <label>
+            <span>家族名</span>
+            <input name="familyName" type="text" placeholder="佐瀬家">
+          </label>
+          <label>
+            <span>あなたの続柄</span>
+            <select name="relation">
+              <option value="mama">ママ</option>
+              <option value="papa">パパ</option>
+              <option value="grandparent">祖父母</option>
+              <option value="sibling">兄弟姉妹</option>
+              <option value="relative">その他親族</option>
+            </select>
+          </label>
+        </div>
+        <button class="primary-btn" type="submit" id="createFamilyButton">このアカウントで家庭IDを作る</button>
+      </form>
       <form id="joinFamilyForm" class="family-form">
         <h3>招待コードで参加</h3>
         <p>家族から共有されたコードを入れると、その家庭IDに参加できます。</p>
@@ -111,9 +129,9 @@
       </form>
       <form id="inviteFamilyForm" class="family-form hidden">
         <h3>家族を招待</h3>
-        <p>パパ/ママは編集可能、祖父母・兄弟姉妹・親族は閲覧のみで招待できます。</p>
+        <p>ここではメールを自動送信しません。招待コードを作ったら、表示されたコードをLINEやメール本文で相手に共有してください。</p>
         <label>
-          <span>招待するメール</span>
+          <span>招待する相手のログインメール</span>
           <input name="inviteEmail" type="email" placeholder="family@example.com">
         </label>
         <div class="choice-row">

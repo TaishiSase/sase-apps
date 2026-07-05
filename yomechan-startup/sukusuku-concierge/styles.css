@@ -353,9 +353,47 @@ h1 {
   padding-top: 14px;
 }
 
+.create-family-form {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
 .family-form h3 {
   font-size: 17px;
   margin: 0;
+}
+
+.invite-share-box {
+  white-space: pre-wrap;
+  border: 1px solid rgba(45, 96, 63, 0.18);
+  border-radius: 8px;
+  background: rgba(246, 248, 238, 0.96);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.65;
+  padding: 12px;
+}
+
+.invite-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.secondary-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf0;
+  color: var(--green-deep);
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
 }
 
 .invite-result {
@@ -1297,6 +1335,7 @@ textarea:focus {
 
   .segmented,
   .choice-row,
+  .invite-actions,
   .feedback-grid,
   .auth-form {
     grid-template-columns: 1fr 1fr;
