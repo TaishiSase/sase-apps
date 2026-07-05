@@ -128,6 +128,8 @@ const selectedSuggestionTitle = document.getElementById("selectedSuggestionTitle
 const plannerForm = document.getElementById("plannerForm");
 const plannerButton = document.getElementById("plannerButton");
 const plannerBoard = document.getElementById("plannerBoard");
+const consultHistory = document.getElementById("consultHistory");
+const plannerHistory = document.getElementById("plannerHistory");
 const missionStatus = document.getElementById("missionStatus");
 const outingForm = document.getElementById("outingForm");
 const outingButton = document.getElementById("outingButton");
@@ -140,7 +142,7 @@ const locationStatus = document.getElementById("locationStatus");
 let authMode = "login";
 
 function loadState() {
-  const fallback = { profile: {}, suggestions: [], logs: [], currentPlan: null, outingHistory: [] };
+  const fallback = { profile: {}, suggestions: [], logs: [], currentPlan: null, consultHistory: [], planHistory: [], outingHistory: [] };
   try {
     return { ...fallback, ...(JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}) };
   } catch (_) {
@@ -403,6 +405,8 @@ function resetActiveChildProfile() {
   state.profile = {};
   state.logs = [];
   state.currentPlan = null;
+  state.consultHistory = [];
+  state.planHistory = [];
   state.outingHistory = [];
   saveState();
   fillProfileForm();
@@ -410,6 +414,8 @@ function resetActiveChildProfile() {
   renderLogHistory();
   renderReflection();
   renderPlanner();
+  renderConsultHistory();
+  renderPlanHistory();
   renderOutingHistory();
 }
 
@@ -546,6 +552,8 @@ async function refreshAuthState() {
   await loadFirstChild();
   await loadRecentLogs();
   await loadCurrentPlan();
+  await loadPlanHistory();
+  await loadConsultHistory();
   await loadOutingHistory();
 }
 
@@ -874,11 +882,15 @@ async function deleteActiveChild() {
   state.profile = {};
   state.logs = [];
   state.currentPlan = null;
+  state.consultHistory = [];
+  state.planHistory = [];
   state.outingHistory = [];
   saveState();
   await loadFirstChild();
   await loadRecentLogs();
   await loadCurrentPlan();
+  await loadPlanHistory();
+  await loadConsultHistory();
   await loadOutingHistory();
   setSyncStatus("同期済み", "online");
   return true;
@@ -1053,15 +1065,38 @@ function normalizePlan(data, payload = {}) {
 
 async function savePlanToSupabase(plan) {
   if (!db || !currentUser || !activeFamily || !activeChild || activeMember?.role !== "parent") return false;
-  const result = await db.from("weekly_plans").upsert({
-    family_id: activeFamily.id,
-    child_id: activeChild.id,
-    week_start: getWeekStart(plan.startDate),
-    plan_json: plan,
-    created_by: currentUser.id
-  }, { onConflict: "child_id,week_start" });
+  const result = await db
+    .from("weekly_plans")
+    .upsert({
+      family_id: activeFamily.id,
+      child_id: activeChild.id,
+      week_start: getWeekStart(plan.startDate),
+      plan_json: plan,
+      created_by: currentUser.id
+    }, { onConflict: "child_id,week_start" })
+    .select("id, plan_json, week_start, created_at")
+    .single();
   if (result.error) throw result.error;
-  return true;
+  if (!result.data?.plan_json) return true;
+  return normalizePlan({
+    ...result.data.plan_json,
+    id: result.data.id,
+    createdAt: result.data.created_at || result.data.plan_json.createdAt
+  }, { startDate: result.data.plan_json.startDate || result.data.week_start });
+}
+
+function addPlanHistory(plan) {
+  if (!plan) return;
+  state.planHistory = [
+    plan,
+    ...(state.planHistory || []).filter((history) => {
+      const sameSavedPlan = history.id === plan.id;
+      const sameLocalPlan = history.startDate === plan.startDate && history.range === plan.range && history.theme === plan.theme;
+      return !sameSavedPlan && !sameLocalPlan;
+    })
+  ].slice(0, 10);
+  saveState();
+  renderPlanHistory();
 }
 
 function createOutingHistoryItem(payload, data) {
@@ -1181,6 +1216,33 @@ async function loadCurrentPlan() {
   renderPlanner();
 }
 
+async function loadPlanHistory() {
+  if (!db || !activeFamily || !activeChild) {
+    renderPlanHistory();
+    return;
+  }
+
+  const result = await db
+    .from("weekly_plans")
+    .select("id, plan_json, week_start, created_at")
+    .eq("family_id", activeFamily.id)
+    .eq("child_id", activeChild.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (result.error) throw result.error;
+
+  state.planHistory = (result.data || [])
+    .filter((row) => row.plan_json)
+    .map((row) => normalizePlan({
+      ...row.plan_json,
+      id: row.id,
+      createdAt: row.created_at || row.plan_json.createdAt
+    }, { startDate: row.plan_json.startDate || row.week_start }));
+  saveState();
+  renderPlanHistory();
+}
+
 async function loadOutingHistory() {
   if (!db || !activeFamily || !activeChild) {
     renderOutingHistory();
@@ -1239,6 +1301,85 @@ async function loadOutingHistory() {
   renderOutingHistory();
 }
 
+function normalizeSuggestionRow(row) {
+  return {
+    id: row.id,
+    type: row.suggestion_type,
+    title: row.title,
+    aim: row.aim,
+    materials: row.materials,
+    steps: row.steps || [],
+    phrases: row.phrases || [],
+    skills: row.skills || [],
+    evidenceTag: row.raw_response?.evidenceTag || "",
+    evidence: row.raw_response?.evidence || "",
+    observe: row.raw_response?.observe || "",
+    consult: row.raw_response?.consult || "",
+    resourceLinks: row.raw_response?.resourceLinks || [],
+    fallback: row.fallback
+  };
+}
+
+function createConsultHistoryItem(payload, summary, suggestions, meta = {}) {
+  const id = meta.id || crypto.randomUUID();
+  return {
+    id,
+    localId: meta.localId || id,
+    createdAt: meta.createdAt || new Date().toISOString(),
+    consultationType: payload.consultationType,
+    durationType: payload.durationType,
+    categoryLabels: payload.categoryLabels || [],
+    message: payload.message || "",
+    summary: summary || "",
+    suggestions: normalizeSuggestions(suggestions)
+  };
+}
+
+function addConsultHistory(item) {
+  state.consultHistory = [
+    item,
+    ...(state.consultHistory || []).filter((history) => history.id !== item.id && history.localId !== item.localId)
+  ].slice(0, 10);
+  saveState();
+  renderConsultHistory();
+}
+
+async function loadConsultHistory() {
+  if (!db || !activeFamily || !activeChild) {
+    renderConsultHistory();
+    return;
+  }
+
+  const result = await db
+    .from("consultations")
+    .select("id, created_at, consultation_type, duration_type, categories, user_message, suggestions(id, title, suggestion_type, aim, materials, steps, phrases, skills, fallback, raw_response, created_at)")
+    .eq("family_id", activeFamily.id)
+    .eq("child_id", activeChild.id)
+    .neq("consultation_type", "outing")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (result.error) throw result.error;
+
+  state.consultHistory = (result.data || []).map((row) => {
+    const suggestions = [...(row.suggestions || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const normalized = normalizeSuggestions(suggestions.map(normalizeSuggestionRow));
+    const first = suggestions[0]?.raw_response || {};
+    return {
+      id: row.id,
+      createdAt: row.created_at,
+      consultationType: row.consultation_type,
+      durationType: row.duration_type,
+      categoryLabels: row.categories || [],
+      message: row.user_message || "",
+      summary: first.summary || first.consultationSummary || "",
+      suggestions: normalized
+    };
+  });
+  saveState();
+  renderConsultHistory();
+}
+
 async function saveSuggestionsToSupabase(payload, data) {
   if (!db || !currentUser || !activeFamily || !activeChild || activeMember?.role !== "parent") return null;
 
@@ -1254,7 +1395,7 @@ async function saveSuggestionsToSupabase(payload, data) {
       advisor_tone: payload.advisorTone,
       user_message: payload.message || null
     })
-    .select("id")
+    .select("id, created_at")
     .single();
 
   if (consultationResult.error) throw consultationResult.error;
@@ -1269,7 +1410,7 @@ async function saveSuggestionsToSupabase(payload, data) {
     phrases: item.phrases,
     skills: item.skills,
     fallback: item.fallback,
-    raw_response: item
+    raw_response: { ...item, summary: data.summary || "" }
   }));
 
   const suggestionResult = await db
@@ -1279,22 +1420,11 @@ async function saveSuggestionsToSupabase(payload, data) {
 
   if (suggestionResult.error) throw suggestionResult.error;
 
-  return suggestionResult.data.map((row) => ({
-    id: row.id,
-    type: row.suggestion_type,
-    title: row.title,
-    aim: row.aim,
-    materials: row.materials,
-    steps: row.steps || [],
-    phrases: row.phrases || [],
-    skills: row.skills || [],
-    evidenceTag: row.raw_response?.evidenceTag || "",
-    evidence: row.raw_response?.evidence || "",
-    observe: row.raw_response?.observe || "",
-    consult: row.raw_response?.consult || "",
-    resourceLinks: row.raw_response?.resourceLinks || [],
-    fallback: row.fallback
-  }));
+  return {
+    consultationId: consultationResult.data.id,
+    createdAt: consultationResult.data.created_at,
+    suggestions: suggestionResult.data.map(normalizeSuggestionRow)
+  };
 }
 
 function fallbackSuggestions(payload) {
@@ -1442,6 +1572,105 @@ function renderSuggestions(summary, suggestions) {
         </div>
       </details>
     `).join("")}
+  `;
+}
+
+function formatHistoryDate(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "過去の履歴";
+  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function renderConsultHistory() {
+  if (!consultHistory) return;
+  const history = state.consultHistory || [];
+  if (!history.length) {
+    consultHistory.innerHTML = `
+      <section class="history-panel">
+        <div class="panel-head compact">
+          <div>
+            <p class="section-kicker">consult history</p>
+            <h3>過去の今日の相談</h3>
+          </div>
+        </div>
+        <div class="empty-state">今日の相談をすると、ここに過去の提案が残ります。</div>
+      </section>
+    `;
+    return;
+  }
+
+  consultHistory.innerHTML = `
+    <section class="history-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="section-kicker">consult history</p>
+          <h3>過去の今日の相談</h3>
+        </div>
+        <span class="status-pill soft">${history.length}件</span>
+      </div>
+      <div class="history-list">
+        ${history.map(renderConsultHistoryItem).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderConsultHistoryItem(item) {
+  const typeLabel = {
+    today_action: "今日の遊び",
+    parenting_worry: "お悩み相談",
+    reflection: "最近の振り返り"
+  }[item.consultationType] || "相談";
+  const firstTitles = (item.suggestions || []).map((suggestion) => suggestion.title).filter(Boolean).slice(0, 2).join(" / ");
+  const categoryText = (item.categoryLabels || []).slice(0, 4).join("・");
+  return `
+    <details class="history-item">
+      <summary>
+        <div>
+          <span class="mission-date">${esc(formatHistoryDate(item.createdAt))} / ${esc(typeLabel)}</span>
+          <h4>${esc(firstTitles || item.summary || "今日の相談")}</h4>
+          <p>${esc([categoryText, item.message].filter(Boolean).join(" / ") || "相談内容を開いて確認できます。")}</p>
+        </div>
+        <span class="expand-hint">見る</span>
+      </summary>
+      <div class="history-detail">
+        ${item.summary ? `<article class="summary-card compact"><p>${esc(item.summary)}</p></article>` : ""}
+        <div class="history-suggestion-list">
+          ${(item.suggestions || []).map(renderSuggestionHistoryCard).join("")}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function renderSuggestionHistoryCard(item) {
+  return `
+    <details class="suggestion-card history-suggestion-card" data-kind="${esc(item.type)}">
+      <summary class="suggestion-top">
+        <div>
+          <p class="suggestion-type">${esc(typeLabels[item.type] || "おすすめ案")}</p>
+          <h3>${esc(item.title)}</h3>
+          ${item.aim ? `<p class="card-preview">${esc(item.aim)}</p>` : ""}
+        </div>
+        <div class="card-actions">
+          ${item.evidenceTag ? `<span class="evidence-tag">${esc(item.evidenceTag)}</span>` : ""}
+          <span class="expand-hint">詳細</span>
+        </div>
+      </summary>
+      <div class="card-detail">
+        <div class="detail-grid">
+          ${detailBox("ねらい", item.aim)}
+          ${detailBox("準備するもの", item.materials)}
+          ${listBox("手順", item.steps, true)}
+          ${listBox("声かけ例", item.phrases)}
+          ${listBox("伸びる力", item.skills)}
+          ${detailBox("発達・教育の背景", item.evidence)}
+          ${detailBox("見るポイント", item.observe)}
+          ${resourceBox("おすすめ教材", item.resourceLinks)}
+          ${detailBox("うまくいかなかった時", item.fallback)}
+        </div>
+      </div>
+    </details>
   `;
 }
 
@@ -1661,6 +1890,113 @@ function renderMissionCard(mission, done) {
           <button class="mission-check" type="button" data-mission-id="${esc(mission.id)}" aria-pressed="${done ? "true" : "false"}">
             ${done ? "達成" : "未達"}
           </button>
+          <span class="expand-hint">詳細</span>
+        </div>
+      </summary>
+      <div class="mission-meta">
+        <span>${esc(mission.category)}</span>
+        <span>${esc(mission.duration)}</span>
+        <span>${esc(mission.evidenceTag)}</span>
+      </div>
+      <div class="mission-detail">
+        <ul>${(mission.steps || []).map((step) => `<li>${esc(step)}</li>`).join("")}</ul>
+        <div class="success-line"><strong>達成条件</strong><span>${esc(mission.successCriteria)}</span></div>
+        ${mission.parentPhrase ? `<div class="success-line"><strong>声かけ</strong><span>${esc(mission.parentPhrase)}</span></div>` : ""}
+        ${resource.url ? `
+          <a class="mission-resource" href="${esc(resource.url)}" target="_blank" rel="noopener">
+            <strong>${esc(resource.title)}</strong>
+            <span>${esc(resource.type)} / ${esc(resource.note)}</span>
+          </a>
+        ` : ""}
+      </div>
+    </details>
+  `;
+}
+
+function renderPlanHistory() {
+  if (!plannerHistory) return;
+  const history = state.planHistory || [];
+  if (!history.length) {
+    plannerHistory.innerHTML = `
+      <section class="history-panel">
+        <div class="panel-head compact">
+          <div>
+            <p class="section-kicker">plan history</p>
+            <h3>過去の週・月プラン</h3>
+          </div>
+        </div>
+        <div class="empty-state">週・月プランを作ると、ここに過去の計画が残ります。</div>
+      </section>
+    `;
+    return;
+  }
+
+  plannerHistory.innerHTML = `
+    <section class="history-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="section-kicker">plan history</p>
+          <h3>過去の週・月プラン</h3>
+        </div>
+        <span class="status-pill soft">${history.length}件</span>
+      </div>
+      <div class="history-list">
+        ${history.map(renderPlanHistoryItem).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderPlanHistoryItem(plan) {
+  const completed = getCompletedMissionIds(plan);
+  const total = plan.missions?.length || 0;
+  const done = (plan.missions || []).filter((mission) => completed.has(mission.id)).length;
+  const rangeLabel = plan.range === "month" ? "月プラン" : "週プラン";
+  const startLabel = plan.startDate ? plan.startDate.replaceAll("-", "/") : "";
+  return `
+    <details class="history-item">
+      <summary>
+        <div>
+          <span class="mission-date">${esc(formatHistoryDate(plan.createdAt))} / ${esc(rangeLabel)}${startLabel ? ` / ${esc(startLabel)}開始` : ""}</span>
+          <h4>${esc(plan.theme || "育ちのプラン")}</h4>
+          <p>${esc(total ? `${done}/${total} 達成` : "ミッションを開いて確認できます。")}</p>
+        </div>
+        <span class="expand-hint">見る</span>
+      </summary>
+      <div class="history-detail">
+        <section class="mission-summary history-mission-summary">
+          <div>
+            <p class="section-kicker">${plan.range === "month" ? "monthly plan" : "weekly plan"}</p>
+            <h3>${esc(plan.theme || "育ちのプラン")}</h3>
+            <p>${esc(plan.summary || "")}</p>
+          </div>
+          <div class="mission-ring" style="--progress:${total ? Math.round((done / total) * 100) : 0}%">
+            <strong>${total ? Math.round((done / total) * 100) : 0}%</strong>
+            <span>達成</span>
+          </div>
+        </section>
+        ${plan.parentGuide ? `<p class="mission-guide">${esc(plan.parentGuide)}</p>` : ""}
+        <div class="mission-grid">
+          ${(plan.missions || []).map((mission) => renderMissionHistoryCard(mission, completed.has(mission.id))).join("")}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function renderMissionHistoryCard(mission, done) {
+  const date = mission.date ? `${mission.date.slice(5).replace("-", "/")}(${esc(mission.dayLabel || "")})` : "";
+  const resource = normalizeResource(mission.resource);
+  return `
+    <details class="mission-card ${done ? "done" : ""}">
+      <summary class="mission-head">
+        <div>
+          <span class="mission-date">${esc(date)}</span>
+          <h4>${esc(mission.title)}</h4>
+          <p class="card-preview">${esc(mission.aim)}</p>
+        </div>
+        <div class="mission-actions">
+          <span class="mission-check read-only">${done ? "達成" : "未達"}</span>
           <span class="expand-hint">詳細</span>
         </div>
       </summary>
@@ -1988,6 +2324,8 @@ childSelect?.addEventListener("change", async () => {
     await loadChildProfile(childSelect.value);
     await loadRecentLogs();
     await loadCurrentPlan();
+    await loadPlanHistory();
+    await loadConsultHistory();
     await loadOutingHistory();
     showToast("表示する子どもを切り替えました。");
   } catch (error) {
@@ -2114,9 +2452,18 @@ askForm.addEventListener("submit", async (event) => {
   try {
     const data = await requestSuggestions(payload);
     let suggestions = data.suggestions;
+    const localHistoryItem = createConsultHistoryItem(payload, data.summary, suggestions);
+    addConsultHistory(localHistoryItem);
     try {
       const saved = await saveSuggestionsToSupabase(payload, data);
-      if (saved) suggestions = saved;
+      if (saved?.suggestions) {
+        suggestions = saved.suggestions;
+        addConsultHistory(createConsultHistoryItem(payload, data.summary, suggestions, {
+          id: saved.consultationId,
+          localId: localHistoryItem.localId,
+          createdAt: saved.createdAt
+        }));
+      }
       showToast(saved ? "AI提案を保存しました。" : "AI提案を表示しました。");
     } catch (dbError) {
       console.warn("Suggestion DB save failed:", dbError);
@@ -2125,6 +2472,7 @@ askForm.addEventListener("submit", async (event) => {
     renderSuggestions(data.summary, suggestions);
   } catch (error) {
     const data = fallbackSuggestions(payload);
+    addConsultHistory(createConsultHistoryItem(payload, data.summary, data.suggestions));
     renderSuggestions(data.summary, data.suggestions);
     resultsSection.insertAdjacentHTML("afterbegin", `
       <div class="error-card">
@@ -2156,9 +2504,15 @@ plannerForm?.addEventListener("submit", async (event) => {
   try {
     const data = await requestPlan(payload);
     state.currentPlan = normalizePlan(data, payload);
+    addPlanHistory(state.currentPlan);
     saveState();
     try {
       const synced = await savePlanToSupabase(state.currentPlan);
+      if (synced && typeof synced === "object") {
+        state.currentPlan = synced;
+        addPlanHistory(synced);
+        saveState();
+      }
       setSyncStatus(synced ? "同期済み" : "ローカル保存", synced ? "online" : "local");
       showToast(synced ? "育ちのプランを保存しました。" : "育ちのプランを作成しました。");
     } catch (dbError) {
@@ -2168,6 +2522,7 @@ plannerForm?.addEventListener("submit", async (event) => {
     renderPlanner();
   } catch (error) {
     state.currentPlan = fallbackPlan(payload);
+    addPlanHistory(state.currentPlan);
     saveState();
     renderPlanner();
     plannerBoard.insertAdjacentHTML("afterbegin", `<div class="error-card">${esc(error.message)}</div>`);
@@ -2194,6 +2549,11 @@ plannerBoard?.addEventListener("click", async (event) => {
   renderPlanner();
   try {
     const synced = await savePlanToSupabase(state.currentPlan);
+    if (synced && typeof synced === "object") {
+      state.currentPlan = synced;
+      addPlanHistory(synced);
+      saveState();
+    }
     setSyncStatus(synced ? "同期済み" : "ローカル保存", synced ? "online" : "local");
     showToast("ミッション達成状況を更新しました。");
   } catch (error) {
@@ -2297,5 +2657,7 @@ fillProfileForm();
 renderLogHistory();
 renderReflection();
 renderPlanner();
+renderPlanHistory();
+renderConsultHistory();
 renderOutingHistory();
 initSupabase();

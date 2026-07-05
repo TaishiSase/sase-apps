@@ -1324,10 +1324,13 @@ textarea:focus {
   line-height: 1.6;
 }
 
+.consult-history,
+.planner-history,
 .outing-history {
   margin-top: 18px;
 }
 
+.history-panel,
 .outing-history-panel {
   display: grid;
   gap: 12px;
@@ -1346,11 +1349,13 @@ textarea:focus {
   margin: 0;
 }
 
+.history-list,
 .outing-history-list {
   display: grid;
   gap: 10px;
 }
 
+.history-item,
 .outing-history-item {
   border: 1px solid rgba(90, 125, 92, 0.16);
   border-radius: 8px;
@@ -1358,6 +1363,7 @@ textarea:focus {
   padding: 12px;
 }
 
+.history-item > summary,
 .outing-history-item > summary {
   display: flex;
   justify-content: space-between;
@@ -1366,15 +1372,19 @@ textarea:focus {
   list-style: none;
 }
 
+.history-item > summary::-webkit-details-marker,
 .outing-history-item > summary::-webkit-details-marker {
   display: none;
 }
 
+.history-item h4,
+.history-item p,
 .outing-history-item h4,
 .outing-history-item p {
   margin: 0;
 }
 
+.history-item h4,
 .outing-history-item h4 {
   color: var(--text);
   font-size: 16px;
@@ -1382,6 +1392,7 @@ textarea:focus {
   margin-top: 4px;
 }
 
+.history-item p,
 .outing-history-item p {
   color: var(--muted);
   font-size: 13px;
@@ -1389,16 +1400,38 @@ textarea:focus {
   margin-top: 5px;
 }
 
+.history-item[open] > summary .expand-hint,
 .outing-history-item[open] > summary .expand-hint {
   background: var(--green);
   border-color: var(--green);
   color: #fff;
 }
 
+.history-detail,
 .outing-history-detail {
   display: grid;
   gap: 12px;
   margin-top: 12px;
+}
+
+.history-suggestion-list {
+  display: grid;
+  gap: 10px;
+}
+
+.history-suggestion-card,
+.history-mission-summary {
+  box-shadow: none;
+}
+
+.summary-card.compact {
+  padding: 12px;
+}
+
+.mission-check.read-only {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mission-summary {
