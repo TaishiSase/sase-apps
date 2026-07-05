@@ -81,13 +81,17 @@ function distanceText(meters) {
 
 function placeType(tags = {}) {
   if (tags.leisure === "playground") return "遊具・公園";
+  if (tags.leisure === "indoor_play") return "屋内遊び場";
   if (tags.leisure === "park" || tags.leisure === "garden" || tags.leisure === "nature_reserve") return "公園・自然";
   if (tags.tourism === "museum" || tags.tourism === "gallery") return "博物館・展示";
   if (tags.tourism === "zoo" || tags.tourism === "aquarium") return "動物・水族館";
   if (tags.tourism === "theme_park" || tags.tourism === "attraction") return "体験施設";
   if (tags.amenity === "library") return "図書館";
+  if (tags.amenity === "cinema") return "映画・室内";
   if (tags.amenity === "community_centre" || tags.amenity === "arts_centre") return "公共施設";
   if (tags.amenity === "cafe") return "休憩スポット";
+  if (tags.amenity === "childcare") return "子育て施設";
+  if (tags.shop === "mall") return "大型商業施設";
   if (tags.shop === "books") return "本屋";
   if (tags.shop === "toys") return "おもちゃ";
   return "周辺スポット";
@@ -170,10 +174,10 @@ async function fetchPlaces(payload) {
   const query = `
 [out:json][timeout:12];
 (
-  nwr(around:${radius},${payload.latitude},${payload.longitude})["leisure"~"park|playground|garden|nature_reserve|sports_centre"];
+  nwr(around:${radius},${payload.latitude},${payload.longitude})["leisure"~"park|playground|garden|nature_reserve|sports_centre|indoor_play"];
   nwr(around:${radius},${payload.latitude},${payload.longitude})["tourism"~"museum|zoo|aquarium|theme_park|gallery|attraction"];
-  nwr(around:${radius},${payload.latitude},${payload.longitude})["amenity"~"library|community_centre|arts_centre|cafe"];
-  nwr(around:${radius},${payload.latitude},${payload.longitude})["shop"~"books|toys"];
+  nwr(around:${radius},${payload.latitude},${payload.longitude})["amenity"~"library|community_centre|arts_centre|cafe|cinema|childcare"];
+  nwr(around:${radius},${payload.latitude},${payload.longitude})["shop"~"books|toys|mall"];
 );
 out center tags 60;
 `;
@@ -222,7 +226,70 @@ out center tags 60;
     .slice(0, 16);
 }
 
+function isNearNagoya(payload) {
+  return payload.latitude >= 34.85 && payload.latitude <= 35.38
+    && payload.longitude >= 136.68 && payload.longitude <= 137.12;
+}
+
+function curatedNagoyaPlaces(payload) {
+  if (!isNearNagoya(payload)) return [];
+  const rows = [
+    ["nagoya-port-aquarium", "名古屋港水族館", "動物・水族館", 35.0902, 136.8812, "雨の日も過ごしやすく、海の生きものを観察しながら会話を広げやすい定番スポット。"],
+    ["higashiyama-zoo", "東山動植物園", "動物・水族館", 35.1569, 136.9770, "動物、植物、坂道歩きまで入れられ、体験と運動を組み合わせやすい。"],
+    ["nagoya-science-museum", "名古屋市科学館", "博物館・展示", 35.1650, 136.8998, "科学への興味づけに向き、天候に左右されにくい。"],
+    ["legoland-japan", "レゴランド・ジャパン", "体験施設", 35.0505, 136.8434, "創造力、身体遊び、親子の非日常体験をまとめて作りやすい。"],
+    ["toda-gawa-kodomo-land", "とだがわこどもランド", "遊具・公園", 35.1117, 136.8102, "大型遊具と広い外遊びで、週末のしっかり活動に使いやすい。"],
+    ["odaka-ryokuchi", "大高緑地", "公園・自然", 35.0651, 136.9525, "自然遊び、運動、乗り物系の体験を組み合わせやすい。"],
+    ["tsuruma-park", "鶴舞公園", "公園・自然", 35.1551, 136.9190, "駅近で短時間の散歩や自然観察に使いやすい。"],
+    ["norikake-garden", "ノリタケの森", "体験施設", 35.1770, 136.8806, "ものづくりや展示を見る体験に向き、短めのお出かけにしやすい。"],
+    ["aeon-mall-nagoya-dome", "イオンモールナゴヤドーム前", "大型商業施設", 35.1877, 136.9450, "天候が悪い時の休憩、買い物、食事をまとめやすい。"],
+    ["aeon-mall-atsuta", "イオンモール熱田", "大型商業施設", 35.1362, 136.9106, "屋内で過ごしやすく、短時間の気分転換や食事調整に使いやすい。"],
+    ["mozo-wondercity", "mozoワンダーシティ", "大型商業施設", 35.2246, 136.8834, "屋内中心で、買い物・食事・休憩を挟みながら過ごしやすい。"],
+    ["hisaya-odori-park", "Hisaya-odori Park", "公園・自然", 35.1737, 136.9089, "街中で短く歩き、休憩や親子会話を入れやすい。"]
+  ];
+
+  const maxDistance = payload.travelMode === "walk" && payload.radius <= 1200 ? 9000 : 28000;
+  return rows
+    .map(([id, name, type, latitude, longitude, note]) => {
+      const meters = haversineMeters(payload.latitude, payload.longitude, latitude, longitude);
+      return {
+        id: `curated-${id}`,
+        name,
+        type,
+        latitude,
+        longitude,
+        distanceMeters: Math.round(meters),
+        distanceText: distanceText(meters),
+        tags: { featured: true, note },
+        mapUrl: mapUrl(latitude, longitude, name),
+        osmUrl: ""
+      };
+    })
+    .filter((place) => place.distanceMeters <= maxDistance);
+}
+
+function mergePlaces(places) {
+  const seen = new Set();
+  return places
+    .filter(Boolean)
+    .filter((place) => {
+      const key = String(place.name || "").replace(/\s+/g, "").toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => {
+      const featuredDiff = Number(Boolean(b.tags?.featured)) - Number(Boolean(a.tags?.featured));
+      if (featuredDiff !== 0) return featuredDiff;
+      return (a.distanceMeters || 999999) - (b.distanceMeters || 999999);
+    })
+    .slice(0, 24);
+}
+
 function buildSearchPlaces(payload, weather) {
+  const curated = curatedNagoyaPlaces(payload);
+  if (curated.length) return curated.slice(0, 8);
+
   const outdoorOk = weather.outdoorScore >= 3 && payload.preference !== "indoor";
   const keywords = outdoorOk
     ? [
@@ -259,7 +326,8 @@ function buildInstructions() {
     "発達心理・幼児教育の背景として、Harvard Center on the Developing Childのserve and return、NAEYCのDevelopmentally Appropriate Practice、CDCの発達観察の考え方を使ってください。",
     "スポットの営業中、料金、予約可否、設備の有無は断定しないでください。必要なら公式情報や現地情報の確認を促してください。",
     "医療診断、発達診断、治療方針の断定は禁止です。",
-    "与えられたplacesに含まれる場所だけを提案してください。placesのidがsearch-で始まるものは固有施設ではなく地図検索候補です。固有名のように断定せず、『地図で探す』候補として扱ってください。",
+    "与えられたplacesに含まれる場所だけを提案してください。必ず具体的なplaceNameを使い、名古屋港水族館、東山動植物園、名古屋市科学館、イオンモールなどの候補がplacesにある場合は、条件に合うものを優先的に検討してください。",
+    "placesのidがsearch-で始まるものは固有施設ではなく地図検索候補です。固有名のように断定せず、『地図で探す』候補として扱ってください。",
     "必ずJSONだけを返してください。Markdownや説明文は不要です。",
     "JSON形式: {\"summary\":\"\",\"weatherSummary\":\"\",\"placeSummary\":\"\",\"plans\":[{\"id\":\"\",\"title\":\"\",\"placeName\":\"\",\"placeType\":\"\",\"distanceText\":\"\",\"timePlan\":\"\",\"why\":\"\",\"weatherFit\":\"\",\"learningAngle\":\"\",\"parentPhrase\":\"\",\"safetyNote\":\"\",\"backupPlan\":\"\",\"evidenceTag\":\"Harvard型|NAEYC型|CDC型\",\"mapUrl\":\"\",\"osmUrl\":\"\"}],\"indoorBackup\":\"\"}",
     "plansは3〜4件。最初の1件を一番おすすめにしてください。"
@@ -275,7 +343,9 @@ function fallbackPlan(payload, weather, places, reason = "") {
   const sorted = [...places].sort((a, b) => {
     const aRank = preferredTypes.includes(a.type) ? preferredTypes.indexOf(a.type) : 99;
     const bRank = preferredTypes.includes(b.type) ? preferredTypes.indexOf(b.type) : 99;
-    const typeDiff = aRank - bRank;
+    const aFeatured = a.tags?.featured ? -2 : 0;
+    const bFeatured = b.tags?.featured ? -2 : 0;
+    const typeDiff = (aRank + aFeatured) - (bRank + bFeatured);
     if (typeDiff !== 0) return typeDiff;
     return a.distanceMeters - b.distanceMeters;
   });
@@ -287,7 +357,7 @@ function fallbackPlan(payload, weather, places, reason = "") {
     placeType: place.type,
     distanceText: place.distanceText,
     timePlan: `${payload.startTime}から${payload.endTime}の間で、移動と休憩を含めて短めに楽しむ。`,
-    why: outdoorOk ? "天気が大きく崩れにくい時間帯なので、体を動かす活動を入れやすいです。" : "雨・暑さ・寒さの影響を受けにくい候補を優先しました。",
+    why: place.tags?.note || (outdoorOk ? "天気が大きく崩れにくい時間帯なので、体を動かす活動を入れやすいです。" : "雨・暑さ・寒さの影響を受けにくい候補を優先しました。"),
     weatherFit: weather.summary,
     learningAngle: `${childName}の興味を見ながら、観察、会話、身体感覚を遊びの中で育てます。`,
     parentPhrase: "何が一番おもしろかった？もう一回見たいものはある？",
@@ -332,9 +402,9 @@ function fallbackPlan(payload, weather, places, reason = "") {
   }
 
   return {
-    summary: reason ? `AI整形が不安定だったため、天気と周辺候補から安全寄りに整理しました。${reason}` : "天気と周辺候補から、無理なく行きやすい順に整理しました。",
+    summary: "天気、移動距離、子どもの過ごしやすさを見て、具体的なおでかけ候補を整理しました。",
     weatherSummary: weather.summary,
-    placeSummary: `${places.length}件の周辺候補を確認しました。`,
+    placeSummary: `${places.length}件の周辺候補を確認しました。${reason ? " 条件に合う候補を優先して表示しています。" : ""}`,
     plans,
     indoorBackup: "天気や混雑が合わない時は、図書館、短い買い物、家での工作・絵本に切り替えると親子とも疲れにくいです。"
   };
@@ -410,7 +480,10 @@ module.exports = async function handler(req, res) {
       ? weatherResult.value
       : { summary: "天気情報を取得できませんでした。", outdoorScore: 2, label: "天気不明" };
     const fetchedPlaces = placesResult.status === "fulfilled" ? placesResult.value : [];
-    const places = fetchedPlaces.length ? fetchedPlaces : buildSearchPlaces(safePayload, weather);
+    const places = mergePlaces([
+      ...curatedNagoyaPlaces(safePayload),
+      ...(fetchedPlaces.length ? fetchedPlaces : buildSearchPlaces(safePayload, weather))
+    ]);
 
     if (!process.env.OPENAI_API_KEY) {
       return sendJson(res, 200, fallbackPlan(safePayload, weather, places, "OpenAI APIキーが未設定です。"));

@@ -132,6 +132,7 @@ const missionStatus = document.getElementById("missionStatus");
 const outingForm = document.getElementById("outingForm");
 const outingButton = document.getElementById("outingButton");
 const outingBoard = document.getElementById("outingBoard");
+const outingHistory = document.getElementById("outingHistory");
 const outingStatus = document.getElementById("outingStatus");
 const locateButton = document.getElementById("locateButton");
 const locationStatus = document.getElementById("locationStatus");
@@ -139,7 +140,7 @@ const locationStatus = document.getElementById("locationStatus");
 let authMode = "login";
 
 function loadState() {
-  const fallback = { profile: {}, suggestions: [], logs: [], currentPlan: null };
+  const fallback = { profile: {}, suggestions: [], logs: [], currentPlan: null, outingHistory: [] };
   try {
     return { ...fallback, ...(JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}) };
   } catch (_) {
@@ -402,12 +403,14 @@ function resetActiveChildProfile() {
   state.profile = {};
   state.logs = [];
   state.currentPlan = null;
+  state.outingHistory = [];
   saveState();
   fillProfileForm();
   renderChildSwitcher();
   renderLogHistory();
   renderReflection();
   renderPlanner();
+  renderOutingHistory();
 }
 
 function getSelectedCategories() {
@@ -543,6 +546,7 @@ async function refreshAuthState() {
   await loadFirstChild();
   await loadRecentLogs();
   await loadCurrentPlan();
+  await loadOutingHistory();
 }
 
 async function loadFamilyMembership() {
@@ -870,10 +874,12 @@ async function deleteActiveChild() {
   state.profile = {};
   state.logs = [];
   state.currentPlan = null;
+  state.outingHistory = [];
   saveState();
   await loadFirstChild();
   await loadRecentLogs();
   await loadCurrentPlan();
+  await loadOutingHistory();
   setSyncStatus("同期済み", "online");
   return true;
 }
@@ -1058,6 +1064,94 @@ async function savePlanToSupabase(plan) {
   return true;
 }
 
+function createOutingHistoryItem(payload, data) {
+  const plan = normalizeOutingPlan(data);
+  const id = data.id || crypto.randomUUID();
+  return {
+    id,
+    localId: id,
+    createdAt: data.createdAt || new Date().toISOString(),
+    date: payload.date,
+    startTime: payload.startTime,
+    endTime: payload.endTime,
+    travelMode: payload.travelMode,
+    preference: payload.preference,
+    message: payload.message || "",
+    summary: plan.summary,
+    weatherSummary: plan.weatherSummary,
+    placeSummary: plan.placeSummary,
+    plans: plan.plans,
+    indoorBackup: plan.indoorBackup
+  };
+}
+
+function addOutingHistory(item) {
+  state.outingHistory = [
+    item,
+    ...(state.outingHistory || []).filter((history) => history.id !== item.id && history.localId !== item.localId)
+  ].slice(0, 10);
+  saveState();
+  renderOutingHistory();
+}
+
+async function saveOutingToSupabase(item) {
+  if (!db || !currentUser || !activeFamily || !activeChild || activeMember?.role !== "parent") return null;
+
+  const consultationResult = await db
+    .from("consultations")
+    .insert({
+      family_id: activeFamily.id,
+      child_id: activeChild.id,
+      user_id: currentUser.id,
+      consultation_type: "outing",
+      duration_type: `${item.startTime || ""}-${item.endTime || ""}`,
+      categories: item.plans.map((plan) => plan.placeType).filter(Boolean).slice(0, 6),
+      advisor_tone: "outing",
+      user_message: item.message || null
+    })
+    .select("id, created_at")
+    .single();
+
+  if (consultationResult.error) throw consultationResult.error;
+
+  const typeCycle = ["quick", "creative", "deep"];
+  const rows = item.plans.map((plan, index) => ({
+    consultation_id: consultationResult.data.id,
+    title: plan.title,
+    suggestion_type: typeCycle[index % typeCycle.length],
+    aim: plan.why,
+    materials: plan.placeName || plan.placeType,
+    steps: [plan.timePlan, plan.learningAngle].filter(Boolean),
+    phrases: [plan.parentPhrase].filter(Boolean),
+    skills: [plan.placeType, plan.evidenceTag].filter(Boolean),
+    fallback: plan.backupPlan,
+    raw_response: {
+      ...plan,
+      outingSummary: item.summary,
+      weatherSummary: item.weatherSummary,
+      placeSummary: item.placeSummary,
+      indoorBackup: item.indoorBackup,
+      outingDate: item.date,
+      startTime: item.startTime,
+      endTime: item.endTime,
+      travelMode: item.travelMode,
+      preference: item.preference
+    }
+  }));
+
+  if (rows.length) {
+    const suggestionResult = await db.from("suggestions").insert(rows);
+    if (suggestionResult.error) throw suggestionResult.error;
+  }
+
+  return {
+    ...item,
+    id: consultationResult.data.id,
+    localId: item.localId,
+    createdAt: consultationResult.data.created_at || item.createdAt
+  };
+}
+
 async function loadCurrentPlan() {
   if (!db || !activeFamily || !activeChild) {
     renderPlanner();
@@ -1085,6 +1179,64 @@ async function loadCurrentPlan() {
     saveState();
   }
   renderPlanner();
+}
+
+async function loadOutingHistory() {
+  if (!db || !activeFamily || !activeChild) {
+    renderOutingHistory();
+    return;
+  }
+
+  const result = await db
+    .from("consultations")
+    .select("id, created_at, duration_type, user_message, suggestions(id, title, suggestion_type, aim, materials, steps, phrases, skills, fallback, raw_response, created_at)")
+    .eq("family_id", activeFamily.id)
+    .eq("child_id", activeChild.id)
+    .eq("consultation_type", "outing")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (result.error) throw result.error;
+
+  state.outingHistory = (result.data || []).map((row) => {
+    const suggestions = [...(row.suggestions || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const first = suggestions[0]?.raw_response || {};
+    const plans = suggestions.map((suggestion, index) => ({
+      id: suggestion.id || `outing-${index + 1}`,
+      title: suggestion.raw_response?.title || suggestion.title || "親子のおでかけ案",
+      placeName: suggestion.raw_response?.placeName || suggestion.materials || "",
+      placeType: suggestion.raw_response?.placeType || suggestion.skills?.[0] || "",
+      distanceText: suggestion.raw_response?.distanceText || "",
+      timePlan: suggestion.raw_response?.timePlan || suggestion.steps?.[0] || "",
+      why: suggestion.raw_response?.why || suggestion.aim || "",
+      weatherFit: suggestion.raw_response?.weatherFit || first.weatherSummary || "",
+      learningAngle: suggestion.raw_response?.learningAngle || suggestion.steps?.[1] || "",
+      parentPhrase: suggestion.raw_response?.parentPhrase || suggestion.phrases?.[0] || "",
+      safetyNote: suggestion.raw_response?.safetyNote || "",
+      backupPlan: suggestion.raw_response?.backupPlan || suggestion.fallback || "",
+      evidenceTag: suggestion.raw_response?.evidenceTag || "NAEYC型",
+      mapUrl: normalizeResource({ url: suggestion.raw_response?.mapUrl }).url,
+      osmUrl: normalizeResource({ url: suggestion.raw_response?.osmUrl }).url
+    }));
+
+    return {
+      id: row.id,
+      createdAt: row.created_at,
+      date: first.outingDate || row.created_at?.slice(0, 10) || "",
+      startTime: first.startTime || row.duration_type?.split("-")[0] || "",
+      endTime: first.endTime || row.duration_type?.split("-")[1] || "",
+      travelMode: first.travelMode || "",
+      preference: first.preference || "",
+      message: row.user_message || "",
+      summary: first.outingSummary || "過去のおでかけ提案です。",
+      weatherSummary: first.weatherSummary || "",
+      placeSummary: first.placeSummary || "",
+      plans,
+      indoorBackup: first.indoorBackup || ""
+    };
+  });
+  saveState();
+  renderOutingHistory();
 }
 
 async function saveSuggestionsToSupabase(payload, data) {
@@ -1619,6 +1771,70 @@ function renderOutingCard(plan) {
   `;
 }
 
+function renderOutingHistory() {
+  if (!outingHistory) return;
+  const history = state.outingHistory || [];
+  if (!history.length) {
+    outingHistory.innerHTML = `
+      <section class="outing-history-panel">
+        <div class="panel-head compact">
+          <div>
+            <p class="section-kicker">outing history</p>
+            <h3>過去のお出かけ提案</h3>
+          </div>
+        </div>
+        <div class="empty-state">お出かけ提案を作ると、ここに履歴が残ります。</div>
+      </section>
+    `;
+    return;
+  }
+
+  outingHistory.innerHTML = `
+    <section class="outing-history-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="section-kicker">outing history</p>
+          <h3>過去のお出かけ提案</h3>
+        </div>
+        <span class="status-pill soft">${history.length}件</span>
+      </div>
+      <div class="outing-history-list">
+        ${history.map(renderOutingHistoryItem).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderOutingHistoryItem(item) {
+  const created = item.createdAt ? new Date(item.createdAt) : null;
+  const createdLabel = created && !Number.isNaN(created.getTime())
+    ? `${created.getMonth() + 1}/${created.getDate()} ${String(created.getHours()).padStart(2, "0")}:${String(created.getMinutes()).padStart(2, "0")}`
+    : "過去の提案";
+  const timeLabel = [item.date, `${item.startTime || ""}-${item.endTime || ""}`].filter(Boolean).join(" ");
+  const firstPlaces = (item.plans || []).slice(0, 3).map((plan) => plan.placeName).filter(Boolean).join(" / ");
+
+  return `
+    <details class="outing-history-item">
+      <summary>
+        <div>
+          <span class="mission-date">${esc(createdLabel)}${timeLabel ? ` / ${esc(timeLabel)}` : ""}</span>
+          <h4>${esc(firstPlaces || "お出かけ提案")}</h4>
+          <p>${esc(item.summary || "過去のおでかけ候補です。")}</p>
+        </div>
+        <span class="expand-hint">見る</span>
+      </summary>
+      <div class="outing-history-detail">
+        ${item.weatherSummary ? `<div class="outing-weather">${esc(item.weatherSummary)}</div>` : ""}
+        ${item.message ? `<p class="outing-place-summary">相談メモ: ${esc(item.message)}</p>` : ""}
+        <div class="outing-grid">
+          ${(item.plans || []).map(renderOutingCard).join("")}
+        </div>
+        ${item.indoorBackup ? `<div class="outing-backup"><strong>天気が崩れた時</strong><span>${esc(item.indoorBackup)}</span></div>` : ""}
+      </div>
+    </details>
+  `;
+}
+
 function fallbackPlan(payload) {
   const startDate = payload.startDate || getWeekStart();
   const childName = payload.profile.name || "お子さん";
@@ -1772,6 +1988,7 @@ childSelect?.addEventListener("change", async () => {
     await loadChildProfile(childSelect.value);
     await loadRecentLogs();
     await loadCurrentPlan();
+    await loadOutingHistory();
     showToast("表示する子どもを切り替えました。");
   } catch (error) {
     console.error(error);
@@ -2013,7 +2230,18 @@ outingForm?.addEventListener("submit", async (event) => {
     outingBoard.innerHTML = '<div class="loading">天気と周辺スポットを見ながら、おでかけ案を作っています...</div>';
     const data = await requestOuting(payload);
     renderOutingPlan(data);
-    showToast("おでかけ候補を作成しました。");
+    const historyItem = createOutingHistoryItem(payload, data);
+    addOutingHistory(historyItem);
+    try {
+      const synced = await saveOutingToSupabase(historyItem);
+      if (synced) addOutingHistory(synced);
+      setSyncStatus(synced ? "同期済み" : "ローカル保存", synced ? "online" : "local");
+      showToast(synced ? "おでかけ候補を保存しました。" : "おでかけ候補を作成しました。");
+    } catch (dbError) {
+      console.warn("Outing DB save failed:", dbError);
+      setSyncStatus("一部ローカル保存", "local");
+      showToast("おでかけ候補をこの端末に保存しました。");
+    }
   } catch (error) {
     console.error(error);
     outingBoard.innerHTML = `<div class="error-card">${esc(error.message)}</div>`;
@@ -2069,4 +2297,5 @@ fillProfileForm();
 renderLogHistory();
 renderReflection();
 renderPlanner();
+renderOutingHistory();
 initSupabase();
