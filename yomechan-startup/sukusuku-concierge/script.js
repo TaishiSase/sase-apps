@@ -159,6 +159,19 @@ function showAuthAlert(html = "") {
   authAlert.innerHTML = html;
 }
 
+function showToast(message, type = "success") {
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.setAttribute("role", "status");
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  window.setTimeout(() => toast.classList.add("show"), 20);
+  window.setTimeout(() => {
+    toast.classList.remove("show");
+    window.setTimeout(() => toast.remove(), 240);
+  }, 3200);
+}
+
 function setAuthMode(mode) {
   authMode = mode;
   showAuthAlert("");
@@ -1345,6 +1358,7 @@ authForm.addEventListener("submit", async (event) => {
     await ensureFreshUser();
     showAuthAlert("");
     await createFamily(formData.get("familyName") || "佐瀬家", formData.get("relation") || "papa");
+    showToast("新規登録と家庭IDの作成が完了しました。");
     setAuthMode("login");
   } else {
     const result = await db.auth.signInWithPassword({ email, password });
@@ -1357,6 +1371,7 @@ authForm.addEventListener("submit", async (event) => {
     session = result.data.session;
     await ensureFreshUser();
     showAuthAlert("");
+    showToast("ログインしました。");
   }
 
   await refreshAuthState();
@@ -1378,6 +1393,7 @@ createFamilyButton.addEventListener("click", async () => {
     await createFamily("佐瀬家", "papa");
     setSyncStatus("同期済み", "online");
     await refreshAuthState();
+    showToast("家庭IDを作成しました。");
   } catch (error) {
     console.error(error);
     alert(`家族作成に失敗しました: ${toUserFacingError(error)}`);
@@ -1391,6 +1407,7 @@ joinFamilyForm.addEventListener("submit", async (event) => {
     await joinFamilyByToken(formData.get("inviteToken"));
     joinFamilyForm.reset();
     setSyncStatus("同期済み", "online");
+    showToast("家族に参加しました。");
   } catch (error) {
     console.error(error);
     alert(error.message);
@@ -1408,6 +1425,7 @@ inviteFamilyForm.addEventListener("submit", async (event) => {
       <p>${esc(invite.email)} に共有してください。同じメールで登録/ログイン後、このコードを入力すると参加できます。</p>
     `;
     inviteFamilyForm.reset();
+    showToast("招待コードを作成しました。");
   } catch (error) {
     console.error(error);
     alert(`招待コード作成に失敗しました: ${error.message}`);
@@ -1426,6 +1444,7 @@ profileForm.addEventListener("submit", async (event) => {
   updateProfileStatus();
   try {
     await saveProfileToSupabase(state.profile);
+    showToast("子どもプロフィールを保存しました。");
   } catch (error) {
     console.error(error);
     setSyncStatus("ローカル保存", "local");
@@ -1462,6 +1481,7 @@ askForm.addEventListener("submit", async (event) => {
     try {
       const saved = await saveSuggestionsToSupabase(payload, data);
       if (saved) suggestions = saved;
+      showToast(saved ? "AI提案を保存しました。" : "AI提案を表示しました。");
     } catch (dbError) {
       console.warn("Suggestion DB save failed:", dbError);
       setSyncStatus("一部ローカル保存", "local");
@@ -1504,6 +1524,7 @@ plannerForm?.addEventListener("submit", async (event) => {
     try {
       const synced = await savePlanToSupabase(state.currentPlan);
       setSyncStatus(synced ? "同期済み" : "ローカル保存", synced ? "online" : "local");
+      showToast(synced ? "育ちのプランを保存しました。" : "育ちのプランを作成しました。");
     } catch (dbError) {
       console.warn("Plan DB save failed:", dbError);
       setSyncStatus("一部ローカル保存", "local");
@@ -1538,6 +1559,7 @@ plannerBoard?.addEventListener("click", async (event) => {
   try {
     const synced = await savePlanToSupabase(state.currentPlan);
     setSyncStatus(synced ? "同期済み" : "ローカル保存", synced ? "online" : "local");
+    showToast("ミッション達成状況を更新しました。");
   } catch (error) {
     console.warn("Plan progress save failed:", error);
     setSyncStatus("一部ローカル保存", "local");
@@ -1569,6 +1591,7 @@ logForm.addEventListener("submit", async (event) => {
   try {
     const synced = await saveLogToSupabase(log);
     setSyncStatus(synced ? "同期済み" : "ローカル保存", synced ? "online" : "local");
+    showToast(synced ? "実施記録を保存しました。" : "実施記録をローカル保存しました。");
   } catch (error) {
     console.warn("Log DB save failed:", error);
     setSyncStatus("一部ローカル保存", "local");

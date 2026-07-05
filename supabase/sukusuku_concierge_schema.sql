@@ -200,9 +200,9 @@ create policy "families_update_parent" on public.families
   using (private.is_family_parent(id))
   with check (private.is_family_parent(id));
 
-create policy "family_members_select_member" on public.family_members
+create policy "family_members_select_access" on public.family_members
   for select to authenticated
-  using (private.is_family_member(family_id));
+  using (private.is_family_member(family_id) or (user_id = (select auth.uid()) and status = 'active'));
 
 create policy "family_members_insert_parent" on public.family_members
   for insert to authenticated
