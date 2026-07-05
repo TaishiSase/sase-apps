@@ -360,12 +360,44 @@ async function initSupabase() {
     db = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
     const result = await db.auth.getSession();
     session = result.data.session;
-    currentUser = session?.user || null;
+    currentUser = null;
+    if (session) {
+      try {
+        await ensureFreshUser();
+      } catch (error) {
+        console.warn("Supabase user verification failed:", error);
+        await db.auth.signOut({ scope: "local" });
+        session = null;
+      }
+    }
     await refreshAuthState();
   } catch (error) {
     console.warn("Supabase init failed:", error);
     setSyncStatus("ローカル保存", "local");
   }
+}
+
+async function ensureFreshUser() {
+  if (!db) throw new Error("Supabaseに接続できていません。");
+
+  const userResult = await db.auth.getUser();
+  if (userResult.error || !userResult.data.user) {
+    currentUser = null;
+    throw new Error("ログイン状態を確認できませんでした。もう一度ログインしてください。");
+  }
+
+  currentUser = userResult.data.user;
+  const sessionResult = await db.auth.getSession();
+  session = sessionResult.data.session;
+  return currentUser;
+}
+
+function toUserFacingError(error) {
+  const message = error?.message || String(error || "");
+  if (message.includes("row-level security policy")) {
+    return "ログイン状態または家族権限の確認で止まりました。ログアウトして再ログインしてから、もう一度お試しください。";
+  }
+  return message;
 }
 
 async function refreshAuthState() {
@@ -416,11 +448,11 @@ async function loadFamilyMembership() {
 }
 
 async function createFamily(name = "佐瀬家", relation = "papa") {
-  if (!db || !currentUser) return;
+  const user = await ensureFreshUser();
 
   const familyResult = await db
     .from("families")
-    .insert({ name, created_by: currentUser.id })
+    .insert({ name, created_by: user.id })
     .select("id, name")
     .single();
 
@@ -431,8 +463,8 @@ async function createFamily(name = "佐瀬家", relation = "papa") {
     .from("family_members")
     .insert({
       family_id: activeFamily.id,
-      user_id: currentUser.id,
-      display_name: currentUser.email || "parent",
+      user_id: user.id,
+      display_name: user.email || "parent",
       role: "parent",
       relation,
       status: "active"
@@ -1301,7 +1333,7 @@ authForm.addEventListener("submit", async (event) => {
       return;
     }
     session = result.data.session;
-    currentUser = result.data.user || session?.user || null;
+    currentUser = result.data.user || null;
     if (!session) {
       setSyncStatus("Auth設定の確認が必要", "local");
       showAuthAlert(`
@@ -1310,6 +1342,7 @@ authForm.addEventListener("submit", async (event) => {
       `);
       return;
     }
+    await ensureFreshUser();
     showAuthAlert("");
     await createFamily(formData.get("familyName") || "佐瀬家", formData.get("relation") || "papa");
     setAuthMode("login");
@@ -1322,7 +1355,7 @@ authForm.addEventListener("submit", async (event) => {
       return;
     }
     session = result.data.session;
-    currentUser = session.user;
+    await ensureFreshUser();
     showAuthAlert("");
   }
 
@@ -1347,7 +1380,7 @@ createFamilyButton.addEventListener("click", async () => {
     await refreshAuthState();
   } catch (error) {
     console.error(error);
-    alert(`家族作成に失敗しました: ${error.message}`);
+    alert(`家族作成に失敗しました: ${toUserFacingError(error)}`);
   }
 });
 

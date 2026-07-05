@@ -187,9 +187,9 @@ revoke all on function private.is_family_parent(uuid) from public;
 grant execute on function private.is_family_member(uuid) to authenticated;
 grant execute on function private.is_family_parent(uuid) to authenticated;
 
-create policy "families_select_member" on public.families
+create policy "families_select_access" on public.families
   for select to authenticated
-  using (private.is_family_member(id));
+  using (private.is_family_member(id) or (select auth.uid()) = created_by);
 
 create policy "families_insert_authenticated" on public.families
   for insert to authenticated
