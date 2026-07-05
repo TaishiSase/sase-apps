@@ -277,7 +277,7 @@ h1 {
   top: 0;
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   border: 1px solid rgba(75, 97, 80, 0.12);
   border-radius: 8px;
@@ -334,7 +334,8 @@ h1 {
   grid-column: 1 / -1;
 }
 
-.planner-workbench {
+.planner-workbench,
+.outing-workbench {
   display: grid;
   gap: 16px;
 }
@@ -1736,6 +1737,10 @@ textarea:focus {
   .feedback-grid,
   .auth-form {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .app-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .photo-uploader,
