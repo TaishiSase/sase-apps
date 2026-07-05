@@ -126,6 +126,12 @@ const plannerForm = document.getElementById("plannerForm");
 const plannerButton = document.getElementById("plannerButton");
 const plannerBoard = document.getElementById("plannerBoard");
 const missionStatus = document.getElementById("missionStatus");
+const outingForm = document.getElementById("outingForm");
+const outingButton = document.getElementById("outingButton");
+const outingBoard = document.getElementById("outingBoard");
+const outingStatus = document.getElementById("outingStatus");
+const locateButton = document.getElementById("locateButton");
+const locationStatus = document.getElementById("locationStatus");
 
 let authMode = "login";
 
@@ -608,15 +614,20 @@ function updateEditAccess() {
   plannerForm?.querySelectorAll("input, select, textarea, button").forEach((element) => {
     element.disabled = !canEdit;
   });
+  outingForm?.querySelectorAll("input, select, textarea, button").forEach((element) => {
+    element.disabled = !canEdit;
+  });
   if (newChildButton) newChildButton.disabled = !canEdit;
   if (deleteChildButton) deleteChildButton.disabled = !canEdit || !activeChild;
   if (childSelect) childSelect.disabled = !familyChildren.length;
   if (!canEdit) {
     askButton.textContent = "閲覧のみ";
     if (plannerButton) plannerButton.textContent = "閲覧のみ";
+    if (outingButton) outingButton.textContent = "閲覧のみ";
   } else if (!askButton.disabled) {
     askButton.textContent = "提案してもらう";
     if (plannerButton && !plannerButton.disabled) plannerButton.textContent = "プランを作る";
+    if (outingButton && !outingButton.disabled) outingButton.textContent = "おでかけ先を提案してもらう";
   }
 }
 
@@ -864,6 +875,43 @@ async function requestPlan(payload) {
   return data;
 }
 
+async function requestOuting(payload) {
+  const response = await fetch("/api/sukusuku-outing", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "おでかけ提案の生成に失敗しました。");
+  }
+  return data;
+}
+
+function getCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("この端末では現在地を取得できません。"));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 12000,
+      maximumAge: 1000 * 60 * 10
+    });
+  });
+}
+
+function setOutingLocation(latitude, longitude) {
+  if (!outingForm) return;
+  outingForm.elements.latitude.value = String(latitude);
+  outingForm.elements.longitude.value = String(longitude);
+  const shortLat = Number(latitude).toFixed(4);
+  const shortLon = Number(longitude).toFixed(4);
+  locationStatus.textContent = `現在地を取得しました（${shortLat}, ${shortLon}）。`;
+  outingStatus.textContent = "現在地取得済み";
+}
+
 function buildPlanPayload(formData) {
   const selectedCategories = getSelectedCategories();
   return {
@@ -876,6 +924,35 @@ function buildPlanPayload(formData) {
     message: formData.get("planMessage") || "",
     recentLogs: state.logs.slice(-10),
     currentPlan: state.currentPlan,
+    createdAt: new Date().toISOString()
+  };
+}
+
+function buildOutingPayload(formData) {
+  const latitude = Number(formData.get("latitude"));
+  const longitude = Number(formData.get("longitude"));
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error("先に「現在地を取得」を押してください。");
+  }
+
+  const startTime = formData.get("startTime") || "10:00";
+  const endTime = formData.get("endTime") || "12:00";
+  if (startTime >= endTime) {
+    throw new Error("終了時間は開始時間より後にしてください。");
+  }
+
+  return {
+    profile: state.profile,
+    latitude,
+    longitude,
+    date: formData.get("outingDate") || formatDateInputValue(),
+    startTime,
+    endTime,
+    travelMode: formData.get("travelMode") || "walk",
+    radius: Number(formData.get("radius") || 2500),
+    preference: formData.get("outingPreference") || "balanced",
+    message: formData.get("outingMessage") || "",
+    recentLogs: state.logs.slice(-8),
     createdAt: new Date().toISOString()
   };
 }
@@ -1426,6 +1503,93 @@ function renderMissionCard(mission, done) {
   `;
 }
 
+function normalizeOutingPlan(data = {}) {
+  const plans = (data.plans || []).slice(0, 4).map((plan, index) => ({
+    id: plan.id || `outing-${index + 1}`,
+    title: plan.title || "親子のおでかけ案",
+    placeName: plan.placeName || "",
+    placeType: plan.placeType || "",
+    distanceText: plan.distanceText || "",
+    timePlan: plan.timePlan || "",
+    why: plan.why || "",
+    weatherFit: plan.weatherFit || "",
+    learningAngle: plan.learningAngle || "",
+    parentPhrase: plan.parentPhrase || "",
+    safetyNote: plan.safetyNote || "",
+    backupPlan: plan.backupPlan || "",
+    evidenceTag: plan.evidenceTag || "NAEYC型",
+    mapUrl: normalizeResource({ url: plan.mapUrl }).url,
+    osmUrl: normalizeResource({ url: plan.osmUrl }).url
+  }));
+
+  return {
+    summary: data.summary || "現在地と天気から、親子で行きやすい候補を整理しました。",
+    weatherSummary: data.weatherSummary || "天気情報は取得できませんでした。",
+    placeSummary: data.placeSummary || "",
+    plans,
+    indoorBackup: data.indoorBackup || ""
+  };
+}
+
+function renderOutingPlan(data = {}) {
+  if (!outingBoard) return;
+  const plan = normalizeOutingPlan(data);
+  if (!plan.plans.length) {
+    outingBoard.innerHTML = `
+      <div class="empty-state">周辺候補が少ないため、条件を広げるか、時間帯を変えてもう一度試してください。</div>
+    `;
+    return;
+  }
+
+  outingBoard.innerHTML = `
+    <article class="outing-summary">
+      <p class="section-kicker">outing plan</p>
+      <h3>今日のおでかけ候補</h3>
+      <p>${esc(plan.summary)}</p>
+      <div class="outing-weather">${esc(plan.weatherSummary)}</div>
+      ${plan.placeSummary ? `<p class="outing-place-summary">${esc(plan.placeSummary)}</p>` : ""}
+    </article>
+    <div class="outing-grid">
+      ${plan.plans.map(renderOutingCard).join("")}
+    </div>
+    ${plan.indoorBackup ? `<div class="outing-backup"><strong>天気が崩れた時</strong><span>${esc(plan.indoorBackup)}</span></div>` : ""}
+  `;
+}
+
+function renderOutingCard(plan) {
+  const links = [
+    plan.mapUrl ? `<a href="${esc(plan.mapUrl)}" target="_blank" rel="noopener">地図で見る</a>` : "",
+    plan.osmUrl ? `<a href="${esc(plan.osmUrl)}" target="_blank" rel="noopener">地図データを見る</a>` : ""
+  ].filter(Boolean).join("");
+
+  return `
+    <details class="outing-card">
+      <summary class="outing-head">
+        <div>
+          <span class="mission-date">${esc(plan.placeType || "おでかけ")}${plan.distanceText ? ` / ${esc(plan.distanceText)}` : ""}</span>
+          <h4>${esc(plan.title)}</h4>
+          <p class="card-preview">${esc(plan.placeName || plan.why)}</p>
+        </div>
+        <span class="expand-hint">詳細</span>
+      </summary>
+      <div class="mission-meta">
+        <span>${esc(plan.evidenceTag)}</span>
+        ${plan.weatherFit ? `<span>${esc(plan.weatherFit)}</span>` : ""}
+      </div>
+      <div class="mission-detail">
+        ${detailBox("行き先", plan.placeName || "現在地周辺")}
+        ${detailBox("時間の使い方", plan.timePlan)}
+        ${detailBox("おすすめ理由", plan.why)}
+        ${detailBox("育ちのねらい", plan.learningAngle)}
+        ${detailBox("声かけ", plan.parentPhrase)}
+        ${detailBox("安全メモ", plan.safetyNote)}
+        ${detailBox("代替案", plan.backupPlan)}
+        ${links ? `<div class="outing-links">${links}</div>` : ""}
+      </div>
+    </details>
+  `;
+}
+
 function fallbackPlan(payload) {
   const startDate = payload.startDate || getWeekStart();
   const childName = payload.profile.name || "お子さん";
@@ -1781,6 +1945,45 @@ plannerBoard?.addEventListener("click", async (event) => {
   }
 });
 
+locateButton?.addEventListener("click", async () => {
+  try {
+    locateButton.disabled = true;
+    locateButton.textContent = "取得中...";
+    locationStatus.textContent = "端末の位置情報を確認しています...";
+    const position = await getCurrentPosition();
+    setOutingLocation(position.coords.latitude, position.coords.longitude);
+    showToast("現在地を取得しました。");
+  } catch (error) {
+    console.error(error);
+    locationStatus.textContent = "現在地を取得できませんでした。ブラウザの位置情報許可を確認してください。";
+    alert(error.message || "現在地を取得できませんでした。");
+  } finally {
+    locateButton.textContent = "現在地を取得";
+    updateEditAccess();
+  }
+});
+
+outingForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    const formData = new FormData(outingForm);
+    const payload = buildOutingPayload(formData);
+    outingButton.disabled = true;
+    outingButton.textContent = "提案中...";
+    outingBoard.innerHTML = '<div class="loading">天気と周辺スポットを見ながら、おでかけ案を作っています...</div>';
+    const data = await requestOuting(payload);
+    renderOutingPlan(data);
+    showToast("おでかけ候補を作成しました。");
+  } catch (error) {
+    console.error(error);
+    outingBoard.innerHTML = `<div class="error-card">${esc(error.message)}</div>`;
+  } finally {
+    outingButton.disabled = false;
+    outingButton.textContent = "おでかけ先を提案してもらう";
+    updateEditAccess();
+  }
+});
+
 resultsSection.addEventListener("click", (event) => {
   const button = event.target.closest("[data-log-id]");
   if (button) {
@@ -1819,6 +2022,7 @@ logForm.addEventListener("submit", async (event) => {
 
 renderCategoryChoices();
 if (plannerForm?.elements.planStartDate) plannerForm.elements.planStartDate.value = getWeekStart();
+if (outingForm?.elements.outingDate) outingForm.elements.outingDate.value = formatDateInputValue();
 syncChoiceState();
 updateConsultationControls();
 fillProfileForm();

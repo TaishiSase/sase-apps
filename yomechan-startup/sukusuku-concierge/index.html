@@ -380,6 +380,79 @@
         </form>
         <div id="plannerBoard" class="planner-board"></div>
       </article>
+
+      <article class="panel outing-panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">outing concierge</p>
+            <h2>おでかけ相談</h2>
+          </div>
+          <span class="status-pill soft" id="outingStatus">現在地未取得</span>
+        </div>
+        <div class="outing-hero">
+          <div class="outing-illustration" aria-hidden="true">
+            <span>🛝</span><span>☀️</span><span>📍</span>
+          </div>
+          <p>現在地、指定した日付と時間帯、天気、周辺スポットを見ながら、親子で行きやすい遊び先を提案します。</p>
+        </div>
+        <form id="outingForm" class="outing-form">
+          <div class="location-row">
+            <button class="secondary-btn" type="button" id="locateButton">現在地を取得</button>
+            <p id="locationStatus">スマホの位置情報を許可すると、周辺候補を探せます。</p>
+          </div>
+          <input name="latitude" type="hidden">
+          <input name="longitude" type="hidden">
+          <div class="choice-row">
+            <label>
+              <span>行きたい日</span>
+              <input name="outingDate" type="date">
+            </label>
+            <label>
+              <span>移動手段</span>
+              <select name="travelMode">
+                <option value="walk">徒歩・ベビーカー</option>
+                <option value="car">車</option>
+                <option value="train">電車・バス</option>
+              </select>
+            </label>
+          </div>
+          <div class="choice-row">
+            <label>
+              <span>開始時間</span>
+              <input name="startTime" type="time" value="10:00">
+            </label>
+            <label>
+              <span>終了時間</span>
+              <input name="endTime" type="time" value="12:00">
+            </label>
+          </div>
+          <div class="choice-row">
+            <label>
+              <span>探す範囲</span>
+              <select name="radius">
+                <option value="1200">近場中心</option>
+                <option value="2500" selected>少し広め</option>
+                <option value="5000">車・電車も含める</option>
+              </select>
+            </label>
+            <label>
+              <span>今日の気分</span>
+              <select name="outingPreference">
+                <option value="balanced">屋内/屋外を天気で判断</option>
+                <option value="outdoor">外で体を動かしたい</option>
+                <option value="indoor">屋内で落ち着いて遊びたい</option>
+                <option value="learning">学びや体験を重視</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>希望メモ</span>
+            <textarea name="outingMessage" rows="3" placeholder="午前中に眠くなりやすい、ベビーカーで行きたい、英語や自然遊びも入れたい、など"></textarea>
+          </label>
+          <button class="primary-btn wide" type="submit" id="outingButton">おでかけ先を提案してもらう</button>
+        </form>
+        <div id="outingBoard" class="outing-board"></div>
+      </article>
     </section>
     </section>
   </main>
