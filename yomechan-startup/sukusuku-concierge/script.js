@@ -110,6 +110,7 @@ const photoInput = document.getElementById("photoInput");
 const childPhotoPreview = document.getElementById("childPhotoPreview");
 const childSelect = document.getElementById("childSelect");
 const newChildButton = document.getElementById("newChildButton");
+const deleteChildButton = document.getElementById("deleteChildButton");
 const askForm = document.getElementById("askForm");
 const durationField = document.getElementById("durationField");
 const logForm = document.getElementById("logForm");
@@ -608,6 +609,7 @@ function updateEditAccess() {
     element.disabled = !canEdit;
   });
   if (newChildButton) newChildButton.disabled = !canEdit;
+  if (deleteChildButton) deleteChildButton.disabled = !canEdit || !activeChild;
   if (childSelect) childSelect.disabled = !familyChildren.length;
   if (!canEdit) {
     askButton.textContent = "閲覧のみ";
@@ -800,6 +802,40 @@ async function saveProfileToSupabase(profile) {
   rememberActiveChild(activeChild.id);
   await loadFirstChild();
   setSyncStatus("同期済み", "online");
+}
+
+async function deleteActiveChild() {
+  if (!db || !activeChild || activeMember?.role !== "parent") {
+    throw new Error("削除できる子どもプロフィールがありません。");
+  }
+
+  const childName = activeChild.name || "この子";
+  const confirmed = window.confirm(`${childName} のプロフィールを削除します。\n相談、記録、週/月プランも一緒に削除されます。よろしいですか？`);
+  if (!confirmed) return false;
+
+  const deletedChildId = activeChild.id;
+  const result = await db
+    .from("children")
+    .delete()
+    .eq("id", deletedChildId)
+    .eq("family_id", activeFamily.id);
+
+  if (result.error) throw result.error;
+
+  if (state.activeChildByFamily?.[activeFamily.id] === deletedChildId) {
+    delete state.activeChildByFamily[activeFamily.id];
+  }
+  activeChild = null;
+  activeProfileId = null;
+  state.profile = {};
+  state.logs = [];
+  state.currentPlan = null;
+  saveState();
+  await loadFirstChild();
+  await loadRecentLogs();
+  await loadCurrentPlan();
+  setSyncStatus("同期済み", "online");
+  return true;
 }
 
 async function requestSuggestions(payload) {
@@ -1543,6 +1579,21 @@ newChildButton?.addEventListener("click", () => {
   resetActiveChildProfile();
   profileForm.elements.name?.focus();
   showToast("新しい子どもプロフィールを入力してください。");
+});
+
+deleteChildButton?.addEventListener("click", async () => {
+  try {
+    deleteChildButton.disabled = true;
+    deleteChildButton.textContent = "削除中...";
+    const deleted = await deleteActiveChild();
+    if (deleted) showToast("子どもプロフィールを削除しました。");
+  } catch (error) {
+    console.error(error);
+    alert(`削除に失敗しました: ${error.message}`);
+  } finally {
+    deleteChildButton.textContent = "この子を削除";
+    updateEditAccess();
+  }
 });
 
 joinFamilyForm.addEventListener("submit", async (event) => {

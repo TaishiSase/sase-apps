@@ -539,6 +539,12 @@ h2 {
   margin-bottom: 14px;
 }
 
+.child-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
 label,
 fieldset {
   display: grid;
@@ -614,7 +620,8 @@ textarea:focus {
 }
 
 .primary-btn,
-.secondary-btn {
+.secondary-btn,
+.danger-btn {
   border: 0;
   border-radius: 8px;
   min-height: 48px;
@@ -630,6 +637,17 @@ textarea:focus {
 .secondary-btn {
   background: #26372d;
   color: #fff;
+}
+
+.danger-btn {
+  background: #fff1ec;
+  color: #9b3d2f;
+}
+
+.primary-btn:disabled,
+.secondary-btn:disabled,
+.danger-btn:disabled {
+  opacity: 0.54;
 }
 
 .wide {
@@ -1367,6 +1385,7 @@ textarea:focus {
   .segmented,
   .choice-row,
   .invite-actions,
+  .child-actions,
   .feedback-grid,
   .auth-form {
     grid-template-columns: 1fr 1fr;

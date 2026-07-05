@@ -165,7 +165,10 @@
               <option value="">未登録</option>
             </select>
           </label>
-          <button class="secondary-btn" type="button" id="newChildButton">新しい子を追加</button>
+          <div class="child-actions">
+            <button class="secondary-btn" type="button" id="newChildButton">新しい子を追加</button>
+            <button class="danger-btn" type="button" id="deleteChildButton">この子を削除</button>
+          </div>
         </div>
 
         <form id="profileForm" class="form-grid">
@@ -205,7 +208,7 @@
             <span>伸ばしたいこと</span>
             <textarea name="goals" rows="3" placeholder="英語、会話、体力、思いやり、好奇心など"></textarea>
           </label>
-          <button class="primary-btn" type="submit">保存</button>
+          <button class="primary-btn" type="submit">追加・変更を保存</button>
         </form>
       </article>
     </section>
