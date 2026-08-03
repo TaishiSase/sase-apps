@@ -4,6 +4,12 @@
 > Purpose: 初期モニター30家族の募集と、FamilyAIへの信頼づくり  
 > Last updated: 2026-08-03
 
+## 0. Business contact account
+
+- **Business Gmail:** 作成済み（アドレスは非公開）
+- 用途: Instagram、初期モニター募集フォーム、問い合わせ、将来のFamilyAI関連サービスの管理
+- 個人用アカウントとは分け、二段階認証を有効にする。
+
 ## 1. Account identity
 
 ### Recommended account name
