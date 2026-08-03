@@ -27,7 +27,7 @@
 
 - 初期は**クリエイターアカウント**にする（創業者の思いと初期モニター募集を中心に発信するため）。
 - 問い合わせ先は事業用Gmailを設定するが、公開は「メール」ボタンにし、本文へアドレスを書かない。
-- プロフィール画像は `assets/familyai-instagram-icon.png` を使う。
+- プロフィール画像は `assets/familyai-instagram-icon-v2.png` を使う。
 
 ## 2. First five posts
 
