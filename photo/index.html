@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<base href="/photo/">
+<script src="/family-account.js"></script>
+<link rel="stylesheet" href="/family-shared.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ことちゃん">
+  <meta name="theme-color" content="#E8748A">
+  <link rel="icon" type="image/png" sizes="192x192" href="/photo/icon-192.png">
+  <link rel="apple-touch-icon" href="/photo/apple-touch-icon.png">
+  <link rel="manifest" href="/photo/manifest.json">
+  <title>今日のことちゃん</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<link rel="stylesheet" href="family-ux.css">
+</head>
+<body>
+<div class="family-bar"><a href="https://sase-apps.vercel.app/">‹ 佐瀬家ホーム</a><a href="https://sase-apps.vercel.app/#apps">アプリ一覧</a></div><p id="familyStatus" class="family-status" role="status"></p>
+
+  <!-- メインアプリ -->
+  <div id="mainApp" class="main-app active">
+
+    <!-- ヘッダー -->
+    <header class="app-header">
+      <h1 class="header-title">
+        <span class="header-icon">📸</span>
+        今日のことちゃん
+      </h1>
+      <button id="authHeaderBtn" class="auth-header-btn" onclick="showLoginModal()">🔑</button>
+    </header>
+
+    <!-- 今日のページ -->
+    <div id="todayPage" class="page">
+      <div class="today-wrap">
+        <div id="streakBanner" class="streak-banner" style="display:none;"></div>
+        <div id="todayPhoto" class="today-hero">
+          <p class="no-photo">📷<br>未投稿です</p>
+        </div>
+        <div id="todayInfo" class="today-info"></div>
+        <div id="onThisDay" class="on-this-day" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- 投稿ページ -->
+    <div id="postPage" class="page">
+      <div class="page-inner">
+        <h2 class="page-title">写真を投稿する</h2>
+        <form id="postForm" class="post-form">
+
+          <div class="form-group">
+            <label class="form-label">写真を選択</label>
+            <label class="file-drop" id="fileDrop">
+              <input type="file" id="photoInput" accept="image/jpeg,image/png,image/heic,.heic" required>
+              <div id="fileDropContent">
+                <span class="file-icon">🖼️</span>
+                <span class="file-text">タップして写真を選択</span>
+                <span class="file-sub">JPG・PNG・HEIC 対応</span>
+              </div>
+              <div id="photoPreview" class="photo-preview" style="display:none;">
+                <img id="previewImage" src="" alt="プレビュー">
+                <span class="preview-change">タップして変更</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="commentInput">コメント</label>
+            <textarea id="commentInput" maxlength="30" rows="3"
+                      placeholder="今日のことちゃんのひとことを…" required></textarea>
+            <p class="char-count"><span id="charCount">0</span> / 30</p>
+          </div>
+
+          <div id="overwriteWarning" class="overwrite-warning" style="display:none;">
+            ⚠️ 今日は既に投稿があります。上書きされます。
+          </div>
+
+          <button type="submit" class="btn-post">投稿する ✨</button>
+          <p class="post-success" id="postSuccess" style="display:none;">✅ 今日のことちゃんを更新しました！</p>
+          <p class="post-error" id="postError"></p>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- 一覧ページ -->
+    <div id="listPage" class="page">
+      <div class="list-header">
+        <div class="list-header-top">
+          <h2 class="page-title">成長アルバム</h2>
+          <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleListView()">📅 月別グリッド</button>
+        </div>
+        <p class="list-hint" id="listHint">← スワイプで過去へ →</p>
+      </div>
+<div class="album-controls"><label for="albumMonth">月を選ぶ</label><input type="month" id="albumMonth" onchange="changeAlbumMonth()"><button type="button" onclick="document.getElementById('albumMonth').value='';changeAlbumMonth()">すべて</button></div><p id="albumStatus" role="status"></p>
+      <div id="timelineContainer" class="timeline-container">
+        <div id="photoTimeline" class="photo-timeline"></div>
+      </div>
+
+      <div id="gridContainer" class="grid-container" style="display:none;"></div><button id="albumMore" class="album-more" type="button" onclick="loadAllPhotos(true)">以前の写真を読み込む</button>
+    </div>
+
+    <!-- お気に入りページ -->
+    <div id="favoritesPage" class="page">
+      <div class="list-header">
+        <h2 class="page-title">⭐ お気に入り</h2>
+      </div>
+      <div id="favoritesList"></div>
+    </div>
+
+    <!-- ボトムナビ -->
+    <nav class="bottom-nav">
+      <button class="bnav-btn" data-page="today" onclick="goToPage('today')">
+        <span class="bnav-icon">🏠</span>
+        <span class="bnav-label">今日</span>
+      </button>
+      <button class="bnav-btn" data-page="post" onclick="goToPage('post')">
+        <span class="bnav-icon post-icon">＋</span>
+        <span class="bnav-label">投稿</span>
+      </button>
+      <button class="bnav-btn" data-page="list" onclick="goToPage('list')">
+        <span class="bnav-icon">📚</span>
+        <span class="bnav-label">一覧</span>
+      </button>
+      <button class="bnav-btn" data-page="favorites" onclick="goToPage('favorites')">
+        <span class="bnav-icon">⭐</span>
+        <span class="bnav-label">お気に入り</span>
+      </button>
+    </nav>
+
+  </div><!-- /mainApp -->
+
+  <!-- 写真ポップアップ -->
+  <div id="photoPopup" class="photo-popup">
+    <div class="popup-inner">
+      <button class="popup-close" onclick="closePhotoPopup()">✕</button>
+      <div class="popup-browse"><button type="button" onclick="movePopup(-1)" aria-label="新しい写真へ">‹</button><p id="popupCaption"></p><button type="button" onclick="movePopup(1)" aria-label="過去の写真へ">›</button></div><img id="popupImage" src="" alt="拡大写真">
+      <div class="popup-actions">
+        <button id="popupLineBtn" class="popup-line-btn" onclick="sharePopupToLine()">
+          <span>🟢</span> LINEでシェア
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ログインモーダル -->
+  <div id="loginModal" class="login-modal-wrap hidden">
+    <div class="login-modal-bg" id="loginModalBg"></div>
+    <div class="login-modal-card">
+      <button class="login-modal-close" id="loginModalClose">✕</button>
+      <span class="auth-icon">📸</span>
+      <h2 class="auth-title" style="font-size:18px">ログイン</h2>
+      <p class="auth-sub">佐瀬家専用</p>
+      <div class="login-member-row">
+        <button class="login-member-btn" id="kotoPapaBtn" data-member="papa">パパ</button>
+        <button class="login-member-btn" id="kotoMamaBtn" data-member="mama">ママ</button>
+      </div>
+      <div class="password-wrap">
+        <input type="password" id="loginPwInput" class="password-input"
+          placeholder="パスワードを入力" autocomplete="current-password">
+      </div>
+      <p class="auth-error" id="loginError"></p>
+      <button class="btn-login" id="loginSubmitBtn">ログイン</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+<script src="family-ux.js"></script>
+</body>
+</html>

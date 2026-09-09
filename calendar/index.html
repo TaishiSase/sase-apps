@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<base href="/calendar/">
+<script src="/family-account.js"></script>
+<link rel="stylesheet" href="/family-shared.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="予定帳">
+  <meta name="theme-color" content="#0f0f1a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>夫婦の共有予定帳</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="family-ux.css">
+</head>
+<body>
+<div class="family-bar"><a href="https://sase-apps.vercel.app/">‹ 佐瀬家ホーム</a><a href="https://sase-apps.vercel.app/#apps">アプリ一覧</a></div><p id="familyStatus" class="family-status" role="status"></p>
+  <div class="bg-orbs">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+  </div>
+
+  <div class="page">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="app-icon">📅</div>
+        <h1 class="app-title">夫婦の共有予定帳</h1>
+      </div>
+      <div class="view-tabs">
+        <button class="view-tab" data-view="month">月</button>
+        <button class="view-tab active" data-view="week">週</button>
+      </div>
+    </header>
+
+    <!-- Navigation -->
+    <div class="cal-nav">
+      <button class="nav-btn" id="prevBtn">‹</button>
+      <div class="cal-title" id="calTitle"></div>
+      <button class="nav-btn" id="nextBtn">›</button>
+      <button class="today-btn" id="todayBtn">今日</button>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <span class="legend-dot all-dot"></span><span class="legend-label">みんな</span>
+      <span class="legend-dot papa-dot"></span><span class="legend-label">パパ</span>
+      <span class="legend-dot mama-dot"></span><span class="legend-label">ママ</span>
+      <span class="legend-dot kotone-dot"></span><span class="legend-label">琴音</span>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-row" id="filterRow">
+      <button class="filter-btn active" data-filter="all">みんな</button>
+      <button class="filter-btn filter-lock" data-filter="papa_private">🔒<br>パパ</button>
+      <button class="filter-btn filter-lock" data-filter="mama_private">🔒<br>ママ</button>
+    </div>
+
+    <!-- Month View -->
+    <div id="monthView" class="cal-section hidden">
+      <div class="dow-header">
+        <span class="dow-sun">日</span>
+        <span>月</span><span>火</span><span>水</span><span>木</span><span>金</span>
+        <span class="dow-sat">土</span>
+      </div>
+      <div id="monthGrid" class="month-grid"></div>
+    </div>
+
+    <!-- Week View -->
+    <div id="weekView" class="cal-section">
+      <div class="week-scroll">
+        <div id="weekGrid" class="week-grid"></div>
+      </div>
+    </div>
+
+    <p id="scheduleLoadStatus" role="status" class="ux-status"></p><section class="agenda"><h2 id="agendaTitle">この週の予定</h2><div id="agendaList"></div></section>
+    <!-- FAB -->
+    <button class="fab" id="fab" title="予定を追加">＋</button>
+  </div>
+
+  <!-- ===== Day Sheet Modal ===== -->
+  <div id="dayModal" class="modal-wrap hidden">
+    <div class="modal-overlay" id="dayOverlay"></div>
+    <div class="modal-sheet">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <h2 class="modal-title" id="dayModalTitle"></h2>
+        <button class="modal-close-btn" id="dayCloseBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="dayEventList" class="day-event-list"></div>
+        <button class="outline-btn" id="dayAddBtn">＋ 予定を追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Add Event Modal ===== -->
+  <div id="addModal" class="modal-wrap hidden">
+    <div class="modal-overlay" id="addOverlay"></div>
+    <div class="modal-sheet">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <h2 class="modal-title" id="addModalTitle">予定を追加</h2>
+        <button class="modal-close-btn" id="addCloseBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-label">開始日</div>
+          <input type="date" id="dateStartInput" class="date-input">
+        </div>
+
+        <!-- 複数日トグル -->
+        <div class="multiday-toggle-row">
+          <label class="toggle-row">
+            <input type="checkbox" id="multiDayToggle" class="toggle-check">
+            <span class="toggle-label-text">日をまたぐ（出張など）</span>
+          </label>
+        </div>
+
+        <!-- 終了日（日をまたぐON時） -->
+        <div id="dateEndRow" class="form-section hidden">
+          <div class="form-label">終了日</div>
+          <input type="date" id="dateEndInput" class="date-input">
+        </div>
+
+        <div class="form-section">
+          <div class="form-label">だれ？</div>
+          <div class="member-selector" id="memberSelector">
+            <button class="member-btn" data-member="all">みんな</button>
+            <button class="member-btn" data-member="papa">パパ</button>
+            <button class="member-btn" data-member="mama">ママ</button>
+            <button class="member-btn" data-member="kotone">琴音</button>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-label">なに？</div>
+          <div class="event-type-grid" id="eventTypeGrid"></div>
+          <input type="text" id="customLabelInput" class="custom-input hidden" placeholder="内容を入力してください">
+        </div>
+
+        <!-- 出社先（出社系のみ） -->
+        <div id="officeLocationRow" class="form-section hidden">
+          <div class="form-label">出社先</div>
+          <div class="location-selector" id="officeLocationSelector">
+            <button class="location-btn" data-loc="豊田">豊田</button>
+            <button class="location-btn" data-loc="MLS">MLS</button>
+            <button class="location-btn" data-loc="丸の内">丸の内</button>
+            <button class="location-btn" data-loc="その他">その他</button>
+          </div>
+          <input type="text" id="officeLocationCustom" class="custom-input hidden" placeholder="出社先を入力">
+        </div>
+
+        <!-- 出張先（出張のみ） -->
+        <div id="tripDestRow" class="form-section hidden">
+          <div class="form-label">出張先</div>
+          <div class="location-selector" id="tripDestSelector">
+            <button class="location-btn" data-dest="東京本社">東京本社</button>
+            <button class="location-btn" data-dest="東富士研究所">東富士研究所</button>
+            <button class="location-btn" data-dest="自由記述">自由記述</button>
+          </div>
+          <input type="text" id="tripDestCustom" class="custom-input hidden" placeholder="出張先を入力">
+        </div>
+
+        <!-- 帰宅予想時刻・晩飯（出社系・出張のみ） -->
+        <div id="workExtraRow" class="form-section hidden">
+          <div class="form-label">帰宅予想時刻</div>
+          <input type="time" id="returnTimeInput" class="time-input">
+          <div class="form-label" style="margin-top: 12px;">晩飯</div>
+          <label class="toggle-row">
+            <input type="checkbox" id="needsDinnerCheck" class="toggle-check">
+            <span class="toggle-label-text">晩飯いる</span>
+          </label>
+        </div>
+
+        <div class="form-section">
+          <div class="form-label">いつ？</div>
+          <div class="time-type-row" id="timeTypeGrid"></div>
+          <div id="customTimeRow" class="custom-time-row hidden">
+            <input type="time" id="timeStartInput" class="time-input">
+            <span class="time-sep">〜</span>
+            <input type="time" id="timeEndInput" class="time-input">
+          </div>
+        </div>
+
+<section class="form-section"><div class="form-label">送迎担当</div><div class="transport-fields"><label>送り<select id="dropoffBy"><option value="">未定・なし</option><option value="papa">パパ</option><option value="mama">ママ</option><option value="both">ふたり</option><option value="other">ほかの人</option></select></label><label>迎え<select id="pickupBy"><option value="">未定・なし</option><option value="papa">パパ</option><option value="mama">ママ</option><option value="both">ふたり</option><option value="other">ほかの人</option></select></label></div></section><section id="repeatSettings" class="form-section"><label>繰り返し<select id="repeatRule"><option value="">繰り返さない</option><option value="weekly">毎週</option><option value="biweekly">隔週</option><option value="monthly">毎月（月末はその月の最終日）</option></select></label><label id="repeatUntilRow" hidden>繰り返す最終日<input type="date" id="repeatUntil"></label><p class="ux-help">終了日までの予定をまとめて作成します（最長1年）。編集・削除は1回ずつ行えます。</p></section><p id="seriesEditNote" class="ux-help" hidden>繰り返し予定の、この回だけを編集します。</p>
+        <!-- 場所（任意） -->
+        <details id="scheduleExtras" class="ux-details"><summary>場所・画像・リマインド</summary>
+        <div class="form-section">
+          <div class="form-label">📍 場所（任意）</div>
+          <input type="text" id="placeInput" class="custom-input" placeholder="場所の名称や住所を入力">
+        </div>
+
+        <!-- 画像添付 -->
+        <div class="form-section">
+          <div class="form-label">📷 画像（任意・複数OK）</div>
+          <input type="file" id="imageFileInput" accept="image/*" multiple class="image-file-input">
+          <label for="imageFileInput" class="image-upload-label">
+            <span class="image-upload-icon">📷</span>
+            <span class="image-upload-text">タップして画像を追加</span>
+          </label>
+          <div id="imageThumbnailRow" class="image-thumbnail-row"></div>
+        </div>
+
+        <!-- リマインド設定 -->
+        <div class="form-section">
+          <label class="toggle-row">
+            <input type="checkbox" id="reminderToggle" class="toggle-check">
+            <span class="toggle-label-text">🔔 リマインドする</span>
+          </label>
+          <div id="reminderSettings" class="reminder-settings hidden">
+            <div class="form-label" style="margin-top:4px;">だれに通知？</div>
+            <div class="reminder-who-row" id="reminderWhoRow">
+              <button class="reminder-who-btn" data-who="papa">パパ</button>
+              <button class="reminder-who-btn" data-who="mama">ママ</button>
+              <button class="reminder-who-btn" data-who="both">両方</button>
+            </div>
+            <div class="form-label" style="margin-top:4px;">いつ通知？（複数可）</div>
+            <div class="reminder-timing-row" id="reminderTimingRow">
+              <button class="reminder-timing-btn selected" data-timing="prev_day">前日夜</button>
+              <button class="reminder-timing-btn" data-timing="morning">当日朝</button>
+              <button class="reminder-timing-btn" data-timing="one_hour">1時間前</button>
+            </div>
+          </div>
+        </div>
+
+        </details>
+        <button class="primary-btn" id="saveBtn">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Detail Modal ===== -->
+  <div id="detailModal" class="modal-wrap hidden">
+    <div class="modal-overlay" id="detailOverlay"></div>
+    <div class="modal-sheet">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <h2 class="modal-title">予定の詳細</h2>
+        <button class="modal-close-btn" id="detailCloseBtn">✕</button>
+      </div>
+      <div class="modal-body" id="detailBody"></div>
+    </div>
+  </div>
+
+  <!-- ===== Password Modal ===== -->
+  <div id="pwModal" class="modal-wrap hidden">
+    <div class="modal-overlay" id="pwOverlay"></div>
+    <div class="modal-sheet">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <h2 class="modal-title" id="pwModalTitle">🔑 パスワード</h2>
+        <button class="modal-close-btn" id="pwCloseBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="password" id="pwInput" class="custom-input" placeholder="パスワードを入力" inputmode="numeric" autocomplete="off">
+        <button class="primary-btn" id="pwConfirmBtn">開く</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Login Screen ===== -->
+  <div id="loginScreen" class="login-screen hidden">
+    <div class="login-card">
+      <div class="login-icon">📅</div>
+      <h1 class="login-title">夫婦の共有予定帳</h1>
+      <p class="login-hint">だれですか？</p>
+      <div class="login-member-row">
+        <button class="login-member-btn" id="loginPapaBtn" data-member="papa">
+          <span class="login-member-dot" style="background:var(--papa)"></span>パパ
+        </button>
+        <button class="login-member-btn" id="loginMamaBtn" data-member="mama">
+          <span class="login-member-dot" style="background:var(--mama)"></span>ママ
+        </button>
+      </div>
+      <input type="password" id="loginInput" class="custom-input"
+        placeholder="パスワードを入力" autocomplete="current-password">
+      <p class="login-error hidden" id="loginError">パスワードが違います</p>
+      <button class="primary-btn" id="loginBtn">ログイン</button>
+    </div>
+  </div>
+
+  <!-- ===== Lightbox ===== -->
+  <div id="lightbox" class="lightbox hidden">
+    <div class="lightbox-backdrop" id="lightboxBackdrop"></div>
+    <button class="lightbox-close" id="lightboxClose">✕</button>
+    <img id="lightboxImg" class="lightbox-img" src="" alt="">
+  </div>
+
+  <!-- ===== Toast ===== -->
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="schedule-extras.js"></script><script src="script.js?v=9"></script>
+<script src="family-ux.js"></script>
+</body>
+</html>

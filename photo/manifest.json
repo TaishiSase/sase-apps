@@ -1,0 +1,23 @@
+{
+  "name": "今日のことちゃん",
+  "short_name": "ことちゃん",
+  "description": "娘の成長アルバム",
+  "start_url": "/photo/",
+  "display": "standalone",
+  "background_color": "#FEFAF5",
+  "theme_color": "#E8748A",
+  "icons": [
+    {
+      "src": "/photo/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/photo/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "scope": "/",
+  "id": "/photo/"
+}

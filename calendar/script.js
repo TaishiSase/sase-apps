@@ -1,0 +1,1652 @@
+'use strict';
+
+// ===== 定数 =====
+var MEMBERS = {
+  all:    { label: 'みんな', color: '#3A9B77', bg: 'rgba(58,155,119,0.10)' },
+  papa:   { label: 'パパ',  color: '#3B8FC0', bg: 'rgba(59,143,192,0.10)' },
+  mama:   { label: 'ママ',  color: '#D45C78', bg: 'rgba(212,92,120,0.10)' },
+  kotone: { label: '琴音',  color: '#E8782A', bg: 'rgba(232,120,42,0.10)' },
+};
+
+var EVENT_TYPES = [
+  { id: '在宅',           emoji: '🏠' },
+  { id: '早朝全日出社',   emoji: '🌅' },
+  { id: '全日出社',       emoji: '🏢' },
+  { id: 'AM出社',         emoji: '🌞' },
+  { id: 'PM出社',         emoji: '🌙' },
+  { id: '出張',           emoji: '✈️' },
+  { id: '飲み会',         emoji: '🍻' },
+  { id: '保育園イベント', emoji: '🎒' },
+  { id: '会社休み',       emoji: '🌴' },
+  { id: 'custom',         emoji: '✏️', label: '自由記述' },
+];
+
+var OFFICE_TYPES = ['早朝全日出社', '全日出社', 'AM出社', 'PM出社'];
+var WORK_TYPES   = ['早朝全日出社', '全日出社', 'AM出社', 'PM出社', '出張'];
+
+var TIME_TYPES = [
+  { id: 'all_day',   label: '終日' },
+  { id: 'morning',   label: '午前' },
+  { id: 'afternoon', label: '午後' },
+  { id: 'evening',   label: '仕事終わり' },
+  { id: 'custom',    label: '時間指定' },
+];
+
+var DAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+
+// ===== プライベートモード =====
+var PW_DURATION = 7 * 24 * 60 * 60 * 1000; // 1週間
+
+function isUnlocked(filter) {return filter===loginMember+'_private';}
+function setUnlocked(filter) {
+  try { localStorage.setItem('unlock_' + filter, String(Date.now())); } catch (e) {}
+}
+
+var pendingFilter = null;
+
+function openPwModal(filter) {showToast('この予定を見るには、本人のアカウントでログインしてください');}
+function closePwModal() {
+  document.getElementById('pwModal').classList.add('hidden');
+  pendingFilter = null;
+}
+function confirmPassword() {closePwModal();showToast('アカウント画面から本人としてログインしてください');}
+function applyFilter(f) {
+  filterMember = f;
+  document.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+  var btn = document.querySelector('.filter-btn[data-filter="' + f + '"]');
+  if (btn) btn.classList.add('active');
+  render();
+}
+
+// ===== 状態 =====
+var cfg = null;
+var db  = null;
+var view = 'week'; // デフォルトは週表示
+var navDate = new Date();
+var schedules = [];
+var filterMember = 'all'; // 'all' | 'papa_private' | 'mama_private'
+
+// 追加/編集モーダル状態
+var addDate      = null;
+var addDateEnd   = null;
+var addMember    = null;
+var addEventType = null;
+var addTimeType  = 'all_day';
+var editingSchedule = null; // 編集中のスケジュール（nullなら新規追加）
+
+// 出社・出張 追加情報
+var addOfficeLocation = null; // '豊田' | 'MLS' | '丸の内' | 'その他'
+var addTripDest       = null; // '東京本社' | '東富士研究所' | '自由記述'
+var addReturnTime     = null; // '18:30' 形式
+var addNeedsDinner    = false;
+var addPlace          = null; // 場所・住所（任意）
+
+// 画像添付状態
+var addImageFiles = []; // File[] (新規追加)
+var addImageUrls  = []; // string[] (既存URL、編集時)
+
+// リマインド状態
+var addReminderEnabled = false;
+var addReminderTargets = []; // ['papa'] | ['mama'] | ['papa','mama']
+var addReminderTiming  = ['prev_day']; // 'prev_day' | 'morning' | 'one_hour'
+
+// 詳細モーダル状態
+var activeSchedule = null;
+
+// ===== ユーティリティ =====
+function dateStr(d) {
+  var y   = d.getFullYear();
+  var m   = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
+function parseDate(s) {
+  var p = s.split('-');
+  return new Date(+p[0], +p[1] - 1, +p[2]);
+}
+
+function formatDateJa(d) {
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日（' + DAYS_JA[d.getDay()] + '）';
+}
+
+function isToday(d) {
+  var t = new Date();
+  return d.getFullYear() === t.getFullYear() &&
+         d.getMonth()    === t.getMonth()    &&
+         d.getDate()     === t.getDate();
+}
+
+function esc(s) {
+  var el = document.createElement('div');
+  el.textContent = String(s || '');
+  return el.innerHTML;
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function () { t.classList.remove('show'); }, 2600);
+}
+
+function getEventDisplay(s) {
+  if (s.event_type === 'custom') {
+    return { emoji: '✏️', label: s.event_label || '自由記述' };
+  }
+  var type = EVENT_TYPES.find(function (t) { return t.id === s.event_type; });
+  return { emoji: type ? type.emoji : '📅', label: s.event_type };
+}
+
+function getTimeLabel(s) {
+  switch (s.time_type) {
+    case 'all_day':   return '終日';
+    case 'morning':   return '午前';
+    case 'afternoon': return '午後';
+    case 'evening':   return '仕事終わり';
+    case 'custom':    return (s.time_start || '') + '〜' + (s.time_end || '');
+    default:          return '';
+  }
+}
+
+function getLocationText(s) {
+  if (OFFICE_TYPES.indexOf(s.event_type) !== -1 && s.office_location) {
+    return s.office_location;
+  }
+  if (s.event_type === '出張' && s.trip_destination) {
+    return s.trip_destination;
+  }
+  if (s.place) return s.place;
+  return null;
+}
+
+function getDateRangeLabel(s) {
+  if (!s.date_end || s.date_end === s.date) return formatDateJa(parseDate(s.date));
+  return formatDateJa(parseDate(s.date)) + ' 〜 ' + formatDateJa(parseDate(s.date_end));
+}
+
+function getWeekStart(d) {
+  var result = new Date(d);
+  result.setDate(result.getDate() - result.getDay());
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+// 日付 ds がスケジュール s の範囲に含まれるか（複数日対応）
+function eventCoversDate(s, ds) {
+  if (!s.date_end || s.date_end === s.date) return s.date === ds;
+  return s.date <= ds && s.date_end >= ds;
+}
+
+function getSchedulesForDate(ds) {
+  return schedules.filter(function (s) { return eventCoversDate(s, ds); });
+}
+
+// すべてのモードで全メンバー行を表示
+function getVisibleMembers() {
+  return ['all', 'papa', 'mama', 'kotone'];
+}
+
+// フィルターに応じた可視イベントを返す
+function isEventVisible(s) {
+  if (filterMember === 'all') return !s.is_private;
+  // プライベートビューはみんなの予定 + 自分のプライベート予定を表示
+  return !s.is_private || s.is_private === filterMember;
+}
+function getVisibleSchedulesForDate(ds) {
+  return schedules.filter(function (s) {
+    return eventCoversDate(s, ds) && isEventVisible(s);
+  });
+}
+
+// ===== データ =====
+var scheduleRequestId = 0;
+async function loadSchedules() {
+  var requestId = ++scheduleRequestId;
+  document.getElementById("scheduleLoadStatus").textContent = "予定を更新中…";
+  var year  = navDate.getFullYear();
+  var month = navDate.getMonth();
+  var start, end;
+
+  if (view === 'month') {
+    start = new Date(year, month - 1, 1);
+    end   = new Date(year, month + 2, 0);
+  } else {
+    var ws = getWeekStart(navDate);
+    start  = new Date(ws);
+    start.setDate(start.getDate() - 21); // 3週間前まで（複数日イベント対応）
+    end    = new Date(ws);
+    end.setDate(end.getDate() + 21);
+  }
+
+  try {
+    var r = await db.from('schedules')
+      .select('*')
+      .lte('date', dateStr(end))
+      .or('date.gte.' + dateStr(start) + ',date_end.gte.' + dateStr(start))
+      .order('date')
+      .order('created_at');
+    if (requestId !== scheduleRequestId) return;
+    if (r.error) throw r.error;
+    schedules = r.data || [];
+    document.getElementById('scheduleLoadStatus').textContent = '';
+  } catch (e) {
+    console.error('loadSchedules error:', e);
+    if(requestId === scheduleRequestId) document.getElementById('scheduleLoadStatus').textContent = '更新できませんでした。表示中の情報は最新でない可能性があります。';
+  }
+}
+
+// ===== 描画 =====
+function render() {
+  updateCalTitle();
+  if (view === 'month') renderMonth();
+  else                   renderWeek();
+  renderAgenda();
+}
+
+function updateCalTitle() {
+  var el = document.getElementById('calTitle');
+  if (view === 'month') {
+    el.textContent = navDate.getFullYear() + '年' + (navDate.getMonth() + 1) + '月';
+  } else {
+    var ws = getWeekStart(navDate);
+    var we = new Date(ws);
+    we.setDate(we.getDate() + 6);
+    el.textContent =
+      ws.getFullYear() + '年 ' +
+      (ws.getMonth() + 1) + '/' + ws.getDate() + '〜' +
+      (we.getMonth() + 1) + '/' + we.getDate();
+  }
+}
+
+function renderMonth() {
+  var grid = document.getElementById('monthGrid');
+  grid.innerHTML = '';
+
+  var year        = navDate.getFullYear();
+  var month       = navDate.getMonth();
+  var firstDow    = new Date(year, month, 1).getDay();
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  for (var i = 0; i < firstDow; i++) {
+    var empty = document.createElement('div');
+    empty.className = 'day-cell empty';
+    grid.appendChild(empty);
+  }
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var date = new Date(year, month, d);
+    var ds   = dateStr(date);
+    var dow  = date.getDay();
+
+    var cell = document.createElement('div');
+    cell.className = 'day-cell' +
+      (isToday(date) ? ' today' : '') +
+      (dow === 0 ? ' sun' : '') +
+      (dow === 6 ? ' sat' : '');
+    cell.dataset.date = ds;
+
+    var numEl = document.createElement('div');
+    numEl.className = 'day-num';
+    numEl.textContent = d;
+    cell.appendChild(numEl);
+
+    var dayScheds = getVisibleSchedulesForDate(ds);
+    if (dayScheds.length > 0) {
+      var dotsEl = document.createElement('div');
+      dotsEl.className = 'day-dots';
+      Object.keys(MEMBERS).forEach(function (m) {
+        var count = dayScheds.filter(function (s) { return s.member === m; }).length;
+        for (var k = 0; k < Math.min(count, 2); k++) {
+          var dot = document.createElement('div');
+          dot.className = 'day-dot';
+          dot.style.background = MEMBERS[m].color;
+          dotsEl.appendChild(dot);
+        }
+      });
+      cell.appendChild(dotsEl);
+    }
+
+    (function (ds) {
+      cell.addEventListener('click', function () { openDayModal(ds); });
+    })(ds);
+
+    grid.appendChild(cell);
+  }
+}
+
+function renderWeek() {
+  var grid = document.getElementById('weekGrid');
+  grid.innerHTML = '';
+
+  var ws   = getWeekStart(navDate);
+  var days = [];
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(ws);
+    d.setDate(d.getDate() + i);
+    days.push(d);
+  }
+  var weekStart = dateStr(days[0]);
+  var weekEnd   = dateStr(days[6]);
+
+  // ヘッダー行
+  var headerRow = document.createElement('div');
+  headerRow.className = 'week-header-row';
+  headerRow.appendChild(document.createElement('div')); // コーナー
+
+  days.forEach(function (d) {
+    var dow   = d.getDay();
+    var isTod = isToday(d);
+    var label = document.createElement('div');
+    label.className = 'week-day-label' +
+      (isTod ? ' today-col' : '') +
+      (dow === 0 ? ' sun-col' : '') +
+      (dow === 6 ? ' sat-col' : '');
+    var numSpan = document.createElement('span');
+    numSpan.className = 'wday-num';
+    numSpan.textContent = d.getDate();
+    label.appendChild(numSpan);
+    label.appendChild(document.createTextNode(DAYS_JA[dow]));
+    headerRow.appendChild(label);
+  });
+  grid.appendChild(headerRow);
+
+  // フィルターに応じたメンバー行（バーレイアウト）
+  getVisibleMembers().forEach(function (member) {
+    var row = document.createElement('div');
+    row.className = 'week-member-row';
+
+    var mlabel = document.createElement('div');
+    mlabel.className = 'week-member-label ' + member;
+    mlabel.textContent = MEMBERS[member].label;
+    row.appendChild(mlabel);
+
+    // 7日分のラッパー
+    var wrapper = document.createElement('div');
+    wrapper.className = 'week-days-wrapper';
+
+    // 背景セル（クリックで予定追加）
+    var bgGrid = document.createElement('div');
+    bgGrid.className = 'week-bg-grid';
+    days.forEach(function (d) {
+      var ds  = dateStr(d);
+      var dow = d.getDay();
+      var cell = document.createElement('div');
+      cell.className = 'week-bg-cell' +
+        (isToday(d)              ? ' today-col'   : '') +
+        (dow === 0 || dow === 6  ? ' weekend-col' : '');
+      (function (ds) {
+        cell.addEventListener('click', function () { openAddModal(ds, member); });
+      })(ds);
+      bgGrid.appendChild(cell);
+    });
+    wrapper.appendChild(bgGrid);
+
+    // イベントバー層
+    var evLayer = document.createElement('div');
+    evLayer.className = 'week-ev-layer';
+
+    var memberEvents = schedules.filter(function (s) {
+      if (s.member !== member) return false;
+      if (!days.some(function (d) { return eventCoversDate(s, dateStr(d)); })) return false;
+      return isEventVisible(s);
+    });
+
+    memberEvents.forEach(function (s) {
+      var eventEnd    = s.date_end || s.date;
+      var clipStart   = s.date > weekStart ? s.date : weekStart;
+      var clipEnd     = eventEnd < weekEnd  ? eventEnd : weekEnd;
+      var colStart    = days.findIndex(function (d) { return dateStr(d) === clipStart; });
+      var colEnd      = days.findIndex(function (d) { return dateStr(d) === clipEnd;   });
+      if (colStart === -1) return;
+      if (colEnd   === -1) colEnd = 6;
+
+      var disp = getEventDisplay(s);
+      var bar  = document.createElement('div');
+      bar.className         = 'week-event-bar';
+      bar.style.gridColumn  = (colStart + 1) + ' / ' + (colEnd + 2);
+      bar.style.background  = MEMBERS[member].bg;
+      bar.style.color       = MEMBERS[member].color;
+      if (s.confirmed) {
+        bar.classList.add('confirmed');
+        bar.style.borderColor = MEMBERS[member].color;
+      } else {
+        bar.style.borderColor = MEMBERS[member].color + '55';
+      }
+
+      // 週をまたぐ場合は端を角丸なしにして「続き」を示す
+      var rL = s.date >= weekStart ? '4px' : '2px';
+      var rR = eventEnd <= weekEnd  ? '4px' : '2px';
+      bar.style.borderRadius = rL + ' ' + rR + ' ' + rR + ' ' + rL;
+      if (s.date < weekStart) bar.style.borderLeft = '3px solid ' + MEMBERS[member].color;
+      if (eventEnd > weekEnd)  bar.style.borderRight = '3px solid ' + MEMBERS[member].color;
+
+      var loc = getLocationText(s);
+      bar.textContent = disp.emoji + ' ' + disp.label + (loc ? '（' + loc + '）' : '');
+
+      (function (s) {
+        bar.addEventListener('click', function (e) {
+          e.stopPropagation();
+          openDetailModal(s);
+        });
+      })(s);
+
+      evLayer.appendChild(bar);
+    });
+
+    wrapper.appendChild(evLayer);
+    row.appendChild(wrapper);
+    grid.appendChild(row);
+  });
+}
+
+// ===== 日付シート =====
+function openDayModal(ds) {
+  var dayScheds = getVisibleSchedulesForDate(ds);
+
+  if (dayScheds.length === 0) {
+    openAddModal(ds, null);
+    return;
+  }
+
+  var d = parseDate(ds);
+  document.getElementById('dayModalTitle').textContent = formatDateJa(d);
+
+  var list = document.getElementById('dayEventList');
+  list.innerHTML = '';
+
+  dayScheds.forEach(function (s) {
+    var disp   = getEventDisplay(s);
+    var member = MEMBERS[s.member] || { label: s.member, color: '#999' };
+    var tl     = getTimeLabel(s);
+
+    var row = document.createElement('div');
+    row.className = 'day-event-row';
+
+    var dot = document.createElement('span');
+    dot.className = 'day-event-member-dot';
+    dot.style.background = member.color;
+    row.appendChild(dot);
+
+    var info = document.createElement('div');
+    info.className = 'day-event-info';
+
+    var labelText = disp.emoji + ' ' + disp.label;
+    if (s.date_end && s.date_end !== s.date) {
+      labelText += '（〜' + formatDateJa(parseDate(s.date_end)) + '）';
+    }
+
+    var locText = getLocationText(s);
+    var metaStr = esc(member.label) + ' · ' + esc(tl);
+    if (locText) metaStr += ' · ' + esc(locText);
+    info.innerHTML =
+      '<span class="day-event-label">' + labelText + '</span>' +
+      '<span class="day-event-meta">' + metaStr + '</span>';
+    row.appendChild(info);
+
+    if (s.confirmed) {
+      var badge = document.createElement('span');
+      badge.className = 'day-event-badge';
+      badge.textContent = '✓';
+      badge.style.color = '#3A9B77';
+      row.appendChild(badge);
+    }
+    if (s.wants_discussion) {
+      var dbadge = document.createElement('span');
+      dbadge.className = 'day-event-badge';
+      dbadge.textContent = '💬';
+      row.appendChild(dbadge);
+    }
+
+    (function (s) {
+      row.addEventListener('click', function () {
+        closeDayModal();
+        openDetailModal(s);
+      });
+    })(s);
+
+    list.appendChild(row);
+  });
+
+  document.getElementById('dayAddBtn').onclick = function () {
+    closeDayModal();
+    openAddModal(ds, null);
+  };
+
+  document.getElementById('dayModal').classList.remove('hidden');
+}
+
+function closeDayModal() {
+  document.getElementById('dayModal').classList.add('hidden');
+}
+
+// ===== 追加/編集モーダル =====
+function openAddModal(ds, member) {
+  resetScheduleExtras(null);
+  editingSchedule = null;
+  addDate      = ds;
+  addDateEnd   = null;
+  addMember    = member || null;
+  addEventType = null;
+  addTimeType  = 'all_day';
+
+  document.getElementById('addModalTitle').textContent = '予定を追加';
+  document.getElementById('dateStartInput').value = ds;
+
+  // 複数日リセット
+  var toggle = document.getElementById('multiDayToggle');
+  toggle.checked = false;
+  document.getElementById('dateEndRow').classList.add('hidden');
+  document.getElementById('dateEndInput').value = '';
+  document.getElementById('dateEndInput').min   = ds;
+
+  // その他リセット
+  document.getElementById('customLabelInput').value = '';
+  document.getElementById('customLabelInput').classList.add('hidden');
+  document.getElementById('customTimeRow').classList.add('hidden');
+  document.getElementById('timeStartInput').value = '';
+  document.getElementById('timeEndInput').value   = '';
+
+  // 出社・出張フィールドリセット
+  addOfficeLocation = null;
+  addTripDest       = null;
+  addReturnTime     = null;
+  addNeedsDinner    = false;
+  addPlace          = null;
+  document.getElementById('placeInput').value = '';
+  document.getElementById('officeLocationRow').classList.add('hidden');
+  document.getElementById('tripDestRow').classList.add('hidden');
+  document.getElementById('workExtraRow').classList.add('hidden');
+  document.getElementById('officeLocationCustom').value = '';
+  document.getElementById('tripDestCustom').value = '';
+
+  // 画像リセット
+  addImageFiles = [];
+  addImageUrls  = [];
+  document.getElementById('imageFileInput').value = '';
+  document.getElementById('imageThumbnailRow').innerHTML = '';
+
+  // リマインドリセット
+  addReminderEnabled = false;
+  addReminderTargets = [];
+  addReminderTiming  = ['prev_day'];
+  document.getElementById('reminderToggle').checked = false;
+  document.getElementById('reminderSettings').classList.add('hidden');
+  renderReminderWhoButtons();
+  renderReminderTimingButtons();
+
+  // メンバーボタン
+  document.querySelectorAll('.member-btn').forEach(function (btn) {
+    btn.classList.toggle('selected', btn.dataset.member === addMember);
+  });
+
+  renderEventTypeGrid();
+  renderTimeTypeGrid();
+  document.getElementById('addModal').classList.remove('hidden');
+}
+
+function openEditModal(s) {
+  resetScheduleExtras(s);
+  editingSchedule = s;
+  addDate      = s.date;
+  addDateEnd   = s.date_end || null;
+  addMember    = s.member;
+  addEventType = s.event_type;
+  addTimeType  = s.time_type || 'all_day';
+
+  document.getElementById('addModalTitle').textContent = '予定を編集';
+  document.getElementById('dateStartInput').value = s.date;
+
+  // 複数日
+  var toggle = document.getElementById('multiDayToggle');
+  var hasEnd = !!(s.date_end && s.date_end !== s.date);
+  toggle.checked = hasEnd;
+  document.getElementById('dateEndRow').classList.toggle('hidden', !hasEnd);
+  document.getElementById('dateEndInput').value = s.date_end || '';
+  document.getElementById('dateEndInput').min   = s.date;
+
+  // 自由記述
+  var ci = document.getElementById('customLabelInput');
+  ci.value = (s.event_type === 'custom' ? s.event_label || '' : '');
+  ci.classList.toggle('hidden', s.event_type !== 'custom');
+
+  // 時間指定
+  var cr = document.getElementById('customTimeRow');
+  cr.classList.toggle('hidden', s.time_type !== 'custom');
+  document.getElementById('timeStartInput').value = s.time_start || '';
+  document.getElementById('timeEndInput').value   = s.time_end   || '';
+
+  // メンバーボタン
+  document.querySelectorAll('.member-btn').forEach(function (btn) {
+    btn.classList.toggle('selected', btn.dataset.member === addMember);
+  });
+
+  // 出社先・出張先プリセット判定
+  var OFFICE_PRESETS = ['豊田', 'MLS', '丸の内'];
+  var TRIP_PRESETS   = ['東京本社', '東富士研究所'];
+  if (OFFICE_TYPES.indexOf(s.event_type) !== -1 && s.office_location) {
+    addOfficeLocation = OFFICE_PRESETS.indexOf(s.office_location) !== -1 ? s.office_location : 'その他';
+  } else {
+    addOfficeLocation = null;
+  }
+  if (s.event_type === '出張' && s.trip_destination) {
+    addTripDest = TRIP_PRESETS.indexOf(s.trip_destination) !== -1 ? s.trip_destination : '自由記述';
+  } else {
+    addTripDest = null;
+  }
+  addReturnTime  = s.return_time  || null;
+  addNeedsDinner = !!s.needs_dinner;
+  addPlace       = s.place || null;
+  document.getElementById('placeInput').value = s.place || '';
+
+  // 画像読み込み
+  addImageFiles = [];
+  addImageUrls  = (s.image_urls || []).slice();
+  document.getElementById('imageFileInput').value = '';
+  renderImageThumbnails();
+
+  // リマインド読み込み
+  addReminderEnabled = !!s.reminder_enabled;
+  addReminderTargets = (s.reminder_targets || []).slice();
+  addReminderTiming  = (s.reminder_timing && s.reminder_timing.length) ? s.reminder_timing.slice() : ['prev_day'];
+  document.getElementById('reminderToggle').checked = addReminderEnabled;
+  document.getElementById('reminderSettings').classList.toggle('hidden', !addReminderEnabled);
+  renderReminderWhoButtons();
+  renderReminderTimingButtons();
+
+  renderEventTypeGrid();
+  renderTimeTypeGrid();
+  updateWorkFields();
+  document.getElementById('addModal').classList.remove('hidden');
+}
+
+function closeAddModal() {
+  document.getElementById('addModal').classList.add('hidden');
+  editingSchedule = null;
+}
+
+function renderEventTypeGrid() {
+  var grid = document.getElementById('eventTypeGrid');
+  grid.innerHTML = '';
+  EVENT_TYPES.forEach(function (type) {
+    var btn = document.createElement('button');
+    btn.className = 'event-type-btn' + (addEventType === type.id ? ' selected' : '');
+    btn.dataset.type = type.id;
+    btn.innerHTML = '<span>' + type.emoji + '</span>' + esc(type.label || type.id);
+    btn.addEventListener('click', function () {
+      addEventType = this.dataset.type;
+      addOfficeLocation = null;
+      addTripDest = null;
+      document.getElementById('officeLocationCustom').value = '';
+      document.getElementById('tripDestCustom').value = '';
+      renderEventTypeGrid();
+      var ci = document.getElementById('customLabelInput');
+      if (addEventType === 'custom') {
+        ci.classList.remove('hidden');
+        ci.focus();
+      } else {
+        ci.classList.add('hidden');
+      }
+      updateWorkFields();
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function renderTimeTypeGrid() {
+  var grid = document.getElementById('timeTypeGrid');
+  grid.innerHTML = '';
+  TIME_TYPES.forEach(function (type) {
+    var btn = document.createElement('button');
+    btn.className = 'time-type-btn' + (addTimeType === type.id ? ' selected' : '');
+    btn.dataset.type = type.id;
+    btn.textContent = type.label;
+    btn.addEventListener('click', function () {
+      addTimeType = this.dataset.type;
+      renderTimeTypeGrid();
+      var cr = document.getElementById('customTimeRow');
+      if (addTimeType === 'custom') cr.classList.remove('hidden');
+      else                           cr.classList.add('hidden');
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function updateWorkFields() {
+  var isOffice = addEventType && OFFICE_TYPES.indexOf(addEventType) !== -1;
+  var isTrip   = addEventType === '出張';
+  var isWork   = addEventType && WORK_TYPES.indexOf(addEventType) !== -1;
+
+  document.getElementById('officeLocationRow').classList.toggle('hidden', !isOffice);
+  document.getElementById('tripDestRow').classList.toggle('hidden', !isTrip);
+  document.getElementById('workExtraRow').classList.toggle('hidden', !isWork);
+
+  if (isOffice) {
+    renderOfficeLocSelector();
+    // 編集時: カスタム出社先を復元
+    if (addOfficeLocation === 'その他') {
+      var stored = editingSchedule ? (editingSchedule.office_location || '') : '';
+      if (['豊田', 'MLS', '丸の内'].indexOf(stored) === -1) {
+        document.getElementById('officeLocationCustom').value = stored;
+      }
+    }
+  }
+  if (isTrip) {
+    renderTripDestSelector();
+    // 編集時: カスタム出張先を復元
+    if (addTripDest === '自由記述') {
+      var stored2 = editingSchedule ? (editingSchedule.trip_destination || '') : '';
+      if (['東京本社', '東富士研究所'].indexOf(stored2) === -1) {
+        document.getElementById('tripDestCustom').value = stored2;
+      }
+    }
+  }
+  document.getElementById('returnTimeInput').value    = addReturnTime || '';
+  document.getElementById('needsDinnerCheck').checked = addNeedsDinner;
+}
+
+function renderOfficeLocSelector() {
+  document.querySelectorAll('#officeLocationSelector .location-btn').forEach(function (btn) {
+    btn.classList.toggle('selected', btn.dataset.loc === addOfficeLocation);
+  });
+  document.getElementById('officeLocationCustom').classList.toggle('hidden', addOfficeLocation !== 'その他');
+}
+
+function renderTripDestSelector() {
+  document.querySelectorAll('#tripDestSelector .location-btn').forEach(function (btn) {
+    btn.classList.toggle('selected', btn.dataset.dest === addTripDest);
+  });
+  document.getElementById('tripDestCustom').classList.toggle('hidden', addTripDest !== '自由記述');
+}
+
+var scheduleSaving=false;
+async function saveSchedule() {
+ if(scheduleSaving)return;
+  addDate = document.getElementById('dateStartInput').value || addDate;
+  if (!addDate)      { showToast('日付が選択されていません'); return; }
+  if (!addMember)    { showToast('だれかを選んでください'); return; }
+  if (!addEventType) { showToast('内容を選んでください'); return; }
+
+  var customLabel = null;
+  if (addEventType === 'custom') {
+    customLabel = document.getElementById('customLabelInput').value.trim();
+    if (!customLabel) { showToast('内容を入力してください'); return; }
+  }
+
+  if (addDateEnd && addDateEnd < addDate) {
+    showToast('終了日は開始日以降にしてください'); return;
+  }
+
+  var timeStart = null, timeEnd = null;
+  if (addTimeType === 'custom') {
+    timeStart = document.getElementById('timeStartInput').value || null;
+    timeEnd   = document.getElementById('timeEndInput').value   || null;
+  }
+
+  // 出社先
+  var officeLoc = null;
+  if (OFFICE_TYPES.indexOf(addEventType) !== -1) {
+    if (addOfficeLocation === 'その他') {
+      officeLoc = document.getElementById('officeLocationCustom').value.trim() || null;
+    } else {
+      officeLoc = addOfficeLocation || null;
+    }
+  }
+
+  // 出張先
+  var tripDest = null;
+  if (addEventType === '出張') {
+    if (addTripDest === '自由記述') {
+      tripDest = document.getElementById('tripDestCustom').value.trim() || null;
+    } else {
+      tripDest = addTripDest || null;
+    }
+  }
+
+  // 帰宅予想時刻・晩飯
+  var returnTime  = null;
+  var needsDinner = null;
+  if (WORK_TYPES.indexOf(addEventType) !== -1) {
+    returnTime  = document.getElementById('returnTimeInput').value || null;
+    needsDinner = document.getElementById('needsDinnerCheck').checked;
+  }
+
+  if (addReminderEnabled && addReminderTargets.length === 0) {
+    showToast('通知する相手を選んでください'); return;
+  }
+
+  var repeatRule=editingSchedule?'':document.getElementById('repeatRule').value;
+  var repeatDates;try{repeatDates=recurrenceDates(addDate,document.getElementById('repeatUntil').value,repeatRule);}catch(e){showToast(e.message);return;}
+  if(repeatRule&&(addImageFiles.length||addImageUrls.length)){showToast('画像は作成後、それぞれの予定に追加してください');return;}
+  var record = {
+    dropoff_by:document.getElementById('dropoffBy').value||null,
+    pickup_by:document.getElementById('pickupBy').value||null,
+    date:             addDate,
+    date_end:         addDateEnd || null,
+    member:           addMember,
+    event_type:       addEventType,
+    event_label:      customLabel,
+    time_type:        addTimeType,
+    time_start:       timeStart,
+    time_end:         timeEnd,
+    is_private:       (filterMember === 'all') ? null : filterMember,
+    office_location:  officeLoc,
+    trip_destination: tripDest,
+    return_time:      returnTime,
+    needs_dinner:     needsDinner,
+    place:            document.getElementById('placeInput').value.trim() || null,
+    reminder_enabled: addReminderEnabled,
+    reminder_targets: addReminderTargets,
+    reminder_timing:  addReminderTiming,
+  };
+
+  scheduleSaving=true;document.getElementById('saveBtn').disabled=true;
+  try {
+    var r;
+    if (editingSchedule) {
+      // 編集：UPDATE（画像は後で更新するため一旦既存URLを維持）
+      r = await db.from('schedules')
+        .update(record)
+        .eq('id', editingSchedule.id)
+        .select().single();
+    } else {
+      // 新規：INSERT
+      record.confirmed        = false;
+      record.wants_discussion = false;
+      record.comment          = null;
+      record.image_urls       = [];
+      if(repeatRule){
+       var series=crypto.randomUUID();
+       var span=addDateEnd?Math.round((parseDate(addDateEnd)-parseDate(addDate))/86400000):0;
+       var records=repeatDates.map(function(day){var end=parseDate(day);end.setDate(end.getDate()+span);return Object.assign({},record,{date:day,date_end:span?dateStr(end):null,series_id:series,repeat_rule:repeatRule});});
+       var bulk=await db.from('schedules').insert(records).select();
+       r={data:bulk.data&&bulk.data[0],error:bulk.error};
+       if(!bulk.error)(bulk.data||[]).forEach(updateCache);
+      }else r = await db.from('schedules').insert(record).select().single();
+    }
+
+    if (r.error) throw r.error;
+    var saved = r.data;
+
+    // 画像アップロード処理
+    var uploadedUrls = [];
+    if (addImageFiles.length > 0) {
+      showToast('画像をアップロード中…');
+      uploadedUrls = await uploadImages(addImageFiles, saved.id);
+    }
+    var finalUrls = addImageUrls.concat(uploadedUrls);
+    var origUrls  = (editingSchedule && editingSchedule.image_urls) || [];
+    var imagesChanged = addImageFiles.length > 0 ||
+      JSON.stringify(finalUrls.slice().sort()) !== JSON.stringify(origUrls.slice().sort());
+    if (imagesChanged) {
+      var imgR = await db.from('schedules')
+        .update({ image_urls: finalUrls })
+        .eq('id', saved.id)
+        .select().single();
+      if (!imgR.error) saved = imgR.data;
+    }
+
+    updateCache(saved);
+    closeAddModal();
+    render();
+    showToast(editingSchedule ? '更新しました ✓' : '保存しました ✓');
+
+    setTimeout(function () { openDetailModal(saved); }, 320);
+  } catch (e) {
+    console.error('saveSchedule error:', e);
+    showToast('保存に失敗しました');
+  } finally {scheduleSaving=false;document.getElementById('saveBtn').disabled=false;}
+}
+
+// ===== 詳細モーダル =====
+function openDetailModal(s) {
+  activeSchedule = s;
+  var body = document.getElementById('detailBody');
+  body.innerHTML = '';
+  renderDetailBody(s, body);
+  document.getElementById('detailModal').classList.remove('hidden');
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.add('hidden');
+  activeSchedule = null;
+}
+
+function renderDetailBody(s, body) {
+  renderScheduleExtras(s,body);
+  var member = MEMBERS[s.member] || { label: s.member, color: '#999', bg: 'rgba(150,150,150,0.10)' };
+  var disp   = getEventDisplay(s);
+  var tl     = getTimeLabel(s);
+  var dateLabel = getDateRangeLabel(s);
+
+  // イベントヘッダー
+  var header = document.createElement('div');
+  header.className = 'detail-event-header';
+  header.style.background = member.bg;
+  header.innerHTML =
+    '<div class="detail-event-emoji">' + disp.emoji + '</div>' +
+    '<div class="detail-event-info">' +
+      '<div class="detail-event-name" style="color:' + member.color + '">' +
+        esc(member.label) + ' · ' + esc(disp.label) +
+      '</div>' +
+      '<div class="detail-event-meta">' + esc(dateLabel) + '<br>' + esc(tl) + '</div>' +
+    '</div>';
+  body.appendChild(header);
+
+  // 場所 / 出社先 / 出張先 / 帰宅時刻 / 晩飯
+  var workLoc = (OFFICE_TYPES.indexOf(s.event_type) !== -1 && s.office_location)
+    ? s.office_location
+    : (s.event_type === '出張' && s.trip_destination ? s.trip_destination : null);
+  var isWork = s.event_type && WORK_TYPES.indexOf(s.event_type) !== -1;
+  if (s.place || workLoc || (isWork && (s.return_time || s.needs_dinner === true || s.needs_dinner === false))) {
+    var workInfo = document.createElement('div');
+    workInfo.className = 'detail-work-info';
+    if (s.place) {
+      workInfo.innerHTML +=
+        '<div class="detail-info-row">' +
+          '<span class="detail-info-label">📍 場所</span>' +
+          '<a class="detail-place-link" href="https://maps.google.com/maps?q=' + encodeURIComponent(s.place) + '" target="_blank" rel="noopener">' + esc(s.place) + '</a>' +
+        '</div>';
+    }
+    var loc = workLoc;
+    if (loc) {
+      var locLabel = OFFICE_TYPES.indexOf(s.event_type) !== -1 ? '出社先' : '出張先';
+      workInfo.innerHTML +=
+        '<div class="detail-info-row">' +
+          '<span class="detail-info-label">' + locLabel + '</span>' +
+          '<span class="detail-info-value">' + esc(loc) + '</span>' +
+        '</div>';
+    }
+    if (s.return_time) {
+      workInfo.innerHTML +=
+        '<div class="detail-info-row">' +
+          '<span class="detail-info-label">帰宅予想</span>' +
+          '<span class="detail-info-value">' + esc(s.return_time) + '</span>' +
+        '</div>';
+    }
+    if (isWork && (s.needs_dinner === true || s.needs_dinner === false)) {
+      workInfo.innerHTML +=
+        '<div class="detail-info-row">' +
+          '<span class="detail-info-label">晩飯</span>' +
+          '<span class="detail-info-value">' + (s.needs_dinner ? '🍚 いる' : 'いらない') + '</span>' +
+        '</div>';
+    }
+    body.appendChild(workInfo);
+  }
+
+  // 画像サムネイル
+  if (s.image_urls && s.image_urls.length > 0) {
+    var imgWrap = document.createElement('div');
+    imgWrap.className = 'detail-images';
+    s.image_urls.forEach(function(url) {
+      var thumb = document.createElement('div');
+      thumb.className = 'detail-thumb';
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = '画像';
+      (function(u) {
+        thumb.addEventListener('click', function() { openLightbox(u); });
+      })(url);
+      thumb.appendChild(img);
+      imgWrap.appendChild(thumb);
+    });
+    body.appendChild(imgWrap);
+  }
+
+  // 確認済みバッジ
+  if (s.confirmed) {
+    var badge = document.createElement('div');
+    badge.className = 'confirmed-badge';
+    badge.innerHTML = '✓ 確認済み';
+    body.appendChild(badge);
+  }
+
+  // コメント表示
+  if (s.comment) {
+    var clabel = document.createElement('div');
+    clabel.className = 'detail-section-label';
+    clabel.textContent = 'コメント';
+    body.appendChild(clabel);
+
+    var cdisplay = document.createElement('div');
+    cdisplay.className = 'comment-display';
+    cdisplay.textContent = s.comment;
+    body.appendChild(cdisplay);
+  }
+
+  // アクションボタン行（確認・話し合い）
+  var actionRow = document.createElement('div');
+  actionRow.className = 'action-row';
+
+  var confirmBtn = document.createElement('button');
+  confirmBtn.className = 'action-btn' + (s.confirmed ? ' confirmed' : '');
+  confirmBtn.innerHTML = s.confirmed ? '✓ 確認済み' : '✓ 確認した';
+  (function (s) {
+    confirmBtn.addEventListener('click', function () { onConfirm(s, body); });
+  })(s);
+  actionRow.appendChild(confirmBtn);
+
+  var discussBtn = document.createElement('button');
+  discussBtn.className = 'action-btn' + (s.wants_discussion ? ' discussing' : '');
+  discussBtn.innerHTML = '💬 話し合いたい';
+  discussBtn.addEventListener('click', function () { toggleCommentForm(s, body); });
+  actionRow.appendChild(discussBtn);
+
+  body.appendChild(actionRow);
+
+  // コメントフォーム
+  var commentFormWrap = document.createElement('div');
+  commentFormWrap.id = 'commentFormWrap';
+  commentFormWrap.className = 'comment-form hidden';
+
+  var textarea = document.createElement('textarea');
+  textarea.className = 'comment-textarea';
+  textarea.id = 'commentTextarea';
+  textarea.placeholder = 'コメントを入力…';
+  textarea.value = s.comment || '';
+  commentFormWrap.appendChild(textarea);
+
+  var saveCommentBtn = document.createElement('button');
+  saveCommentBtn.className = 'comment-save-btn';
+  saveCommentBtn.textContent = 'コメントを保存';
+  (function (s) {
+    saveCommentBtn.addEventListener('click', function () { onSaveComment(s, body); });
+  })(s);
+  commentFormWrap.appendChild(saveCommentBtn);
+  body.appendChild(commentFormWrap);
+
+  // LINE共有ボタン
+  var lineBtn = document.createElement('button');
+  lineBtn.className = 'line-btn';
+  lineBtn.innerHTML = '<span>💬</span> LINEで通知する';
+  (function (s) {
+    lineBtn.addEventListener('click', function () { shareToLine(s, false); });
+  })(s);
+  body.appendChild(lineBtn);
+
+  // 編集・削除ボタン行
+  var detailActionRow = document.createElement('div');
+  detailActionRow.className = 'detail-action-row';
+
+  var editBtn = document.createElement('button');
+  editBtn.className = 'edit-btn';
+  editBtn.textContent = '✏️ 編集する';
+  (function (s) {
+    editBtn.addEventListener('click', function () {
+      closeDetailModal();
+      openEditModal(s);
+    });
+  })(s);
+  detailActionRow.appendChild(editBtn);
+  var copyBtn=document.createElement('button'); copyBtn.className='edit-btn';copyBtn.textContent='複製する';
+  copyBtn.onclick=function(){
+    closeDetailModal();
+    var copy=Object.assign({},s,{id:null,date:dateStr(new Date()),date_end:null,image_urls:[],confirmed:false,confirmed_at:null,comment:null,wants_discussion:false});
+    if(s.is_private && s.is_private!==filterMember){ showToast('複製するには同じプライベートフィルターを開いてください');return; }
+    openEditModal(copy);editingSchedule=null;document.getElementById('addModalTitle').textContent='予定を複製 · 日付を選んで保存';
+  };detailActionRow.appendChild(copyBtn);
+
+  var deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-btn';
+  deleteBtn.textContent = '削除する';
+  (function (s) {
+    deleteBtn.addEventListener('click', function () { onDelete(s); });
+  })(s);
+  detailActionRow.appendChild(deleteBtn);
+
+  body.appendChild(detailActionRow);
+}
+
+async function onConfirm(s, body) {
+  try {
+    var now = new Date().toISOString();
+    var r = await db.from('schedules')
+      .update({ confirmed: true, confirmed_at: now, updated_at: now })
+      .eq('id', s.id)
+      .select().single();
+    if (r.error) throw r.error;
+
+    updateCache(r.data);
+    body.innerHTML = '';
+    renderDetailBody(r.data, body);
+    activeSchedule = r.data;
+    showToast('確認しました ✓');
+    render();
+  } catch (e) {
+    showToast('更新に失敗しました');
+  }
+}
+
+function toggleCommentForm(s, body) {
+  var wrap = document.getElementById('commentFormWrap');
+  if (!wrap) return;
+  if (wrap.classList.contains('hidden')) {
+    wrap.classList.remove('hidden');
+    var ta = document.getElementById('commentTextarea');
+    if (ta) ta.focus();
+  } else {
+    wrap.classList.add('hidden');
+  }
+}
+
+async function onSaveComment(s, body) {
+  var ta = document.getElementById('commentTextarea');
+  if (!ta) return;
+  var comment = ta.value.trim();
+  if (!comment) { showToast('コメントを入力してください'); return; }
+
+  try {
+    var now = new Date().toISOString();
+    var r = await db.from('schedules')
+      .update({ comment: comment, wants_discussion: true, updated_at: now })
+      .eq('id', s.id)
+      .select().single();
+    if (r.error) throw r.error;
+
+    updateCache(r.data);
+    body.innerHTML = '';
+    renderDetailBody(r.data, body);
+    activeSchedule = r.data;
+    showToast('コメントを保存しました');
+    render();
+
+    setTimeout(function () { shareToLine(r.data, true); }, 200);
+  } catch (e) {
+    showToast('保存に失敗しました');
+  }
+}
+
+async function onDelete(s) {
+  if (!window.confirm('この予定を削除しますか？')) return;
+  try {
+    var r = await db.from('schedules').delete().eq('id', s.id);
+    if (r.error) throw r.error;
+
+    if (s.image_urls && s.image_urls.length > 0) {
+      deleteImages(s.image_urls);
+    }
+
+    schedules = schedules.filter(function (x) { return x.id !== s.id; });
+    closeDetailModal();
+    render();
+    showToast('削除しました');
+  } catch (e) {
+    showToast('削除に失敗しました');
+  }
+}
+
+function updateCache(updated) {
+  var idx = schedules.findIndex(function (x) { return x.id === updated.id; });
+  if (idx !== -1) schedules[idx] = updated;
+  else            schedules.push(updated);
+}
+
+// ===== 画像圧縮 =====
+async function compressImage(file) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    var blobUrl = URL.createObjectURL(file);
+    img.onload = function() {
+      var MAX = 1200;
+      var w = img.width, h = img.height;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(function(blob) {
+        URL.revokeObjectURL(blobUrl);
+        resolve(blob);
+      }, 'image/jpeg', 0.75);
+    };
+    img.onerror = function() { URL.revokeObjectURL(blobUrl); resolve(null); };
+    img.src = blobUrl;
+  });
+}
+
+// ===== 画像アップロード =====
+async function uploadImages(files, scheduleId) {
+  var urls = [];
+  for (var i = 0; i < files.length; i++) {
+    try {
+      var blob = await compressImage(files[i]);
+      if (!blob) continue;
+      var path = scheduleId + '/' + Date.now() + '_' + i + '.jpg';
+      var r = await db.storage.from('schedule-images').upload(path, blob, { contentType: 'image/jpeg' });
+      if (r.error) { console.error('upload error:', r.error); continue; }
+      var pub = db.storage.from('schedule-images').getPublicUrl(path);
+      urls.push(pub.data.publicUrl);
+    } catch (e) { console.error('upload exception:', e); }
+  }
+  return urls;
+}
+
+// ===== 画像削除（ストレージクリーンアップ）=====
+async function deleteImages(urls) {
+  if (!urls || !urls.length) return;
+  var marker = '/schedule-images/';
+  var paths = urls.map(function(url) {
+    var idx = url.indexOf(marker);
+    return idx !== -1 ? decodeURIComponent(url.slice(idx + marker.length)) : null;
+  }).filter(Boolean);
+  if (paths.length) await db.storage.from('schedule-images').remove(paths);
+}
+
+// ===== 画像サムネイルUI（追加モーダル）=====
+function renderImageThumbnails() {
+  var row = document.getElementById('imageThumbnailRow');
+  row.innerHTML = '';
+
+  // 既存画像（編集時）
+  addImageUrls.forEach(function(url, i) {
+    var item = makeThumbnailItem(url, function() {
+      addImageUrls.splice(i, 1);
+      renderImageThumbnails();
+    });
+    row.appendChild(item);
+  });
+
+  // 新規追加ファイル
+  addImageFiles.forEach(function(file, i) {
+    var previewUrl = URL.createObjectURL(file);
+    var item = makeThumbnailItem(previewUrl, function() {
+      URL.revokeObjectURL(previewUrl);
+      addImageFiles.splice(i, 1);
+      renderImageThumbnails();
+    });
+    row.appendChild(item);
+  });
+}
+
+function makeThumbnailItem(url, onRemove) {
+  var item = document.createElement('div');
+  item.className = 'thumb-item';
+  var img = document.createElement('img');
+  img.src = url;
+  img.alt = '';
+  (function(u) {
+    img.addEventListener('click', function() { openLightbox(u); });
+  })(url);
+  var btn = document.createElement('button');
+  btn.className = 'thumb-remove';
+  btn.textContent = '✕';
+  btn.type = 'button';
+  btn.addEventListener('click', function(e) { e.stopPropagation(); onRemove(); });
+  item.appendChild(img);
+  item.appendChild(btn);
+  return item;
+}
+
+// ===== ライトボックス =====
+function openLightbox(url) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightbox').classList.remove('hidden');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.add('hidden');
+  document.getElementById('lightboxImg').src = '';
+}
+
+// ===== リマインドUI =====
+function renderReminderWhoButtons() {
+  document.querySelectorAll('.reminder-who-btn').forEach(function(btn) {
+    var who = btn.dataset.who;
+    var selected = false;
+    if (who === 'both') {
+      selected = addReminderTargets.indexOf('papa') !== -1 && addReminderTargets.indexOf('mama') !== -1;
+    } else {
+      selected = addReminderTargets.length === 1 && addReminderTargets[0] === who;
+    }
+    btn.classList.toggle('selected', selected);
+  });
+}
+
+function renderReminderTimingButtons() {
+  document.querySelectorAll('.reminder-timing-btn').forEach(function(btn) {
+    btn.classList.toggle('selected', addReminderTiming.indexOf(btn.dataset.timing) !== -1);
+  });
+}
+
+// ===== プッシュ通知購読 =====
+function urlBase64ToUint8Array(base64String) {
+  var padding = '='.repeat((4 - base64String.length % 4) % 4);
+  var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  var raw = window.atob(base64);
+  var arr = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+async function subscribePush() {
+  if (!cfg.vapidPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    var reg = await navigator.serviceWorker.ready;
+    var perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+    var sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(cfg.vapidPublicKey)
+    });
+    await savePushSubscription(sub);
+    console.log('Push subscription saved for', loginMember);
+  } catch (e) {
+    console.error('subscribePush error:', e);
+  }
+}
+
+async function savePushSubscription(subscription) {
+  var subJson = subscription.toJSON();
+  await db.from('push_subscriptions').delete().eq('member', loginMember);
+  await db.from('push_subscriptions').insert({ member: loginMember, subscription: subJson });
+}
+
+// ===== LINE 共有 =====
+function shareToLine(s, isDiscuss) {
+  var disp      = getEventDisplay(s);
+  var tl        = getTimeLabel(s);
+  var dateLabel = getDateRangeLabel(s);
+  var mLabel    = MEMBERS[s.member] ? MEMBERS[s.member].label : s.member;
+  var text;
+
+  var loc = getLocationText(s);
+  if (isDiscuss) {
+    text = '💬 話し合いたい！\n' +
+      mLabel + '｜' + dateLabel + ' ' + disp.emoji + ' ' + disp.label + (loc ? '（' + loc + '）' : '') + '\n' +
+      (s.comment ? '「' + s.comment + '」' : '');
+  } else {
+    text = '📅 ' + mLabel + '｜' + dateLabel + '\n' +
+      disp.emoji + ' ' + disp.label + (loc ? '（' + loc + '）' : '') + '（' + tl + '）\n' +
+      (s.return_time ? '帰宅予想: ' + s.return_time + '\n' : '') +
+      (s.needs_dinner ? '🍚 晩飯いる\n' : '') +
+      '夫婦の共有予定帳に登録しました';
+  }
+
+  var url = 'https://line.me/R/share?text=' + encodeURIComponent(text);
+  window.open(url, '_blank');
+}
+
+// ===== ナビゲーション =====
+async function navigate(dir) {
+  if (view === 'month') {
+    navDate = new Date(navDate.getFullYear(),navDate.getMonth()+dir,1);
+  } else {
+    navDate.setDate(navDate.getDate() + dir * 7);
+  }
+  render();
+  await loadSchedules();
+  render();
+}
+
+async function goToday() {
+  navDate = new Date();
+  await loadSchedules();
+  render();
+}
+
+// ===== イベントリスナー =====
+function setupEventListeners() {
+  // ビュー切替
+  document.querySelectorAll('.view-tab').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      view = this.dataset.view;
+      document.querySelectorAll('.view-tab').forEach(function (b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      document.getElementById('monthView').classList.toggle('hidden', view !== 'month');
+      document.getElementById('weekView').classList.toggle('hidden', view !== 'week');
+      await loadSchedules();
+      render();
+    });
+  });
+
+  // ナビゲーション
+  document.getElementById('prevBtn').addEventListener('click', function () { navigate(-1); });
+  document.getElementById('nextBtn').addEventListener('click', function () { navigate(1); });
+  document.getElementById('todayBtn').addEventListener('click', goToday);
+
+  // FAB
+  document.getElementById('fab').addEventListener('click', function () {
+    openAddModal(dateStr(new Date()), null);
+  });
+
+  // 日付シート
+  document.getElementById('dayOverlay').addEventListener('click', closeDayModal);
+  document.getElementById('dayCloseBtn').addEventListener('click', closeDayModal);
+
+  // 追加モーダル
+  document.getElementById('addOverlay').addEventListener('click', closeAddModal);
+  document.getElementById('addCloseBtn').addEventListener('click', closeAddModal);
+  document.getElementById('repeatRule').addEventListener('change',function(){document.getElementById('repeatUntilRow').hidden=!this.value;});
+  document.getElementById('saveBtn').addEventListener('click', saveSchedule);
+
+  // 複数日トグル
+  document.getElementById('multiDayToggle').addEventListener('change', function () {
+    var row = document.getElementById('dateEndRow');
+    if (this.checked) {
+      row.classList.remove('hidden');
+      document.getElementById('dateEndInput').focus();
+    } else {
+      row.classList.add('hidden');
+      addDateEnd = null;
+      document.getElementById('dateEndInput').value = '';
+    }
+  });
+
+  // 開始日変更
+  document.getElementById('dateStartInput').addEventListener('change', function () {
+    addDate = this.value || null;
+    document.getElementById('dateEndInput').min = this.value || '';
+  });
+
+  // 終了日選択
+  document.getElementById('dateEndInput').addEventListener('change', function () {
+    addDateEnd = this.value || null;
+  });
+
+  // メンバーボタン
+  document.querySelectorAll('.member-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      addMember = this.dataset.member;
+      document.querySelectorAll('.member-btn').forEach(function (b) { b.classList.remove('selected'); });
+      this.classList.add('selected');
+    });
+  });
+
+  // 出社先ボタン
+  document.querySelectorAll('#officeLocationSelector .location-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      addOfficeLocation = this.dataset.loc;
+      renderOfficeLocSelector();
+    });
+  });
+  // 出張先ボタン
+  document.querySelectorAll('#tripDestSelector .location-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      addTripDest = this.dataset.dest;
+      renderTripDestSelector();
+    });
+  });
+  // 帰宅予想時刻
+  document.getElementById('returnTimeInput').addEventListener('change', function () {
+    addReturnTime = this.value || null;
+  });
+  // 晩飯チェック
+  document.getElementById('needsDinnerCheck').addEventListener('change', function () {
+    addNeedsDinner = this.checked;
+  });
+
+  // フィルターボタン
+  document.querySelectorAll('.filter-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var f = this.dataset.filter;
+      if (f === 'papa_private' || f === 'mama_private') {
+        if (!isUnlocked(f)) { openPwModal(f); return; }
+      }
+      applyFilter(f);
+    });
+  });
+
+  // パスワードモーダル
+  document.getElementById('pwOverlay').addEventListener('click', closePwModal);
+  document.getElementById('pwCloseBtn').addEventListener('click', closePwModal);
+  document.getElementById('pwConfirmBtn').addEventListener('click', confirmPassword);
+  document.getElementById('pwInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') confirmPassword();
+  });
+
+  // 詳細モーダル
+  document.getElementById('detailOverlay').addEventListener('click', closeDetailModal);
+  document.getElementById('detailCloseBtn').addEventListener('click', closeDetailModal);
+
+  // 画像ファイル選択
+  document.getElementById('imageFileInput').addEventListener('change', function() {
+    var files = Array.from(this.files);
+    if (addImageFiles.length + addImageUrls.length + files.length > 10) {
+      showToast('画像は10枚まで追加できます');
+      this.value = '';
+      return;
+    }
+    addImageFiles = addImageFiles.concat(files);
+    this.value = '';
+    renderImageThumbnails();
+  });
+
+  // ライトボックス
+  document.getElementById('lightboxBackdrop').addEventListener('click', closeLightbox);
+  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+
+  // リマインドトグル
+  document.getElementById('reminderToggle').addEventListener('change', function() {
+    addReminderEnabled = this.checked;
+    document.getElementById('reminderSettings').classList.toggle('hidden', !this.checked);
+  });
+
+  // 「だれに通知」ボタン
+  document.querySelectorAll('.reminder-who-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var who = this.dataset.who;
+      if (who === 'both') {
+        addReminderTargets = ['papa', 'mama'];
+      } else {
+        addReminderTargets = [who];
+      }
+      renderReminderWhoButtons();
+    });
+  });
+
+  // 「いつ通知」ボタン（複数選択）
+  document.querySelectorAll('.reminder-timing-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var timing = this.dataset.timing;
+      var idx = addReminderTiming.indexOf(timing);
+      if (idx !== -1) {
+        if (addReminderTiming.length > 1) addReminderTiming.splice(idx, 1);
+      } else {
+        addReminderTiming.push(timing);
+      }
+      renderReminderTimingButtons();
+    });
+  });
+}
+
+// ===== 初期化 =====
+async function startApp() {
+  var sessionInfo=await db.auth.getSession();loginMember=sessionInfo.data.session?.user.email===cfg.papaEmail?'papa':'mama';
+  setupEventListeners();
+  var params=new URLSearchParams(location.search), date=params.get('date');
+  if(date && /^\d{4}-\d{2}-\d{2}$/.test(date) && !isNaN(parseDate(date))) navDate=parseDate(date);
+  await loadSchedules();render();
+  var schedule=schedules.find(function(s){return s.id===params.get('schedule') && isEventVisible(s);});
+  if(schedule) openDetailModal(schedule);
+  else if(params.get('action')==='add'){openAddModal(dateStr(new Date()),'all');if(params.get('title')){addEventType='custom';renderEventTypeGrid();document.getElementById('customLabelInput').classList.remove('hidden');document.getElementById('customLabelInput').value=params.get('title').slice(0,120);document.getElementById('placeInput').value=(params.get('place')||'').slice(0,500);}}
+}
+
+var loginMember = null; // 'papa' | 'mama'
+
+async function handleLogin() {
+  var errEl = document.getElementById('loginError');
+  var btn   = document.getElementById('loginBtn');
+  errEl.classList.add('hidden');
+
+  if (!loginMember) {
+    errEl.textContent = 'パパかママを選んでください';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  var pw    = document.getElementById('loginInput').value.trim();
+  var email = loginMember === 'papa' ? cfg.papaEmail : cfg.mamaEmail;
+  btn.disabled    = true;
+  btn.textContent = '確認中…';
+
+  var { error } = await db.auth.signInWithPassword({ email: email, password: pw });
+
+  btn.disabled    = false;
+  btn.textContent = 'ログイン';
+  if (error) {
+    errEl.textContent = 'パスワードが違います';
+    errEl.classList.remove('hidden');
+    document.getElementById('loginInput').value = '';
+    document.getElementById('loginInput').focus();
+    return;
+  }
+  document.getElementById('loginScreen').classList.add('hidden');
+  await startApp();
+  // プッシュ通知の購読（バックグラウンドで実行）
+  subscribePush();
+}
+
+async function init() {
+  // Service Worker 登録（プッシュ通知用）
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/calendar/sw.js').catch(function(e) {
+      console.warn('SW registration failed:', e);
+    });
+  }
+
+  try {
+    var res = await fetch('config.json');
+    cfg = await res.json();
+    db  = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+ if(!(await FamilyAccount.requireSession(db)))return;
+  } catch (e) {
+    console.error('Config error:', e);
+    showToast('接続エラーが発生しました');
+    return;
+  }
+
+  document.querySelectorAll('.login-member-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      loginMember = this.dataset.member;
+      document.querySelectorAll('.login-member-btn').forEach(function (b) { b.classList.remove('selected'); });
+      this.classList.add('selected');
+      document.getElementById('loginInput').focus();
+    });
+  });
+  document.getElementById('loginBtn').addEventListener('click', handleLogin);
+  document.getElementById('loginInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') handleLogin();
+  });
+
+  var { data: { session } } = await db.auth.getSession();
+  if (!session) {
+    document.getElementById('loginScreen').classList.remove('hidden');
+    return;
+  }
+  await startApp();
+}
+
+function renderAgenda(){
+  var start=view==='week'?dateStr(getWeekStart(navDate)):dateStr(new Date(navDate.getFullYear(),navDate.getMonth(),1));
+  var endDate=view==='week'?getWeekStart(navDate):new Date(navDate.getFullYear(),navDate.getMonth()+1,0);
+  if(view==='week')endDate.setDate(endDate.getDate()+6);
+  var end=dateStr(endDate), list=schedules.filter(function(s){return isEventVisible(s) && s.date<=end && (s.date_end||s.date)>=start;});
+  var host=document.getElementById('agendaList');host.replaceChildren();
+  document.getElementById('agendaTitle').textContent=view==='week'?'この週の予定':'この月の予定';
+  if(!list.length){host.textContent='登録された予定はありません';return;}
+  list.forEach(function(s){var b=document.createElement('button');b.className='agenda-row';
+    var member=MEMBERS[s.member]||MEMBERS.all;
+    b.innerHTML='<span class="agenda-date">'+esc(getDateRangeLabel(s))+'</span><strong>'+esc(member.label)+' · '+esc(s.event_label||s.event_type)+'</strong><span>'+esc(getTimeLabel(s))+(s.return_time?' · 帰宅 '+esc(s.return_time.slice(0,5)):'')+'</span><small>'+(s.confirmed?'確認済み':'確認待ち')+'</small>';
+    b.onclick=function(){openDetailModal(s);};host.appendChild(b);
+  });
+}
+init();
