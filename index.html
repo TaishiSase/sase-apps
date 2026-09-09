@@ -5,108 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="佐瀬家アプリ">
-  <meta name="theme-color" content="#1a1a2e">
+  <meta name="theme-color" content="#f6f5f0">
+  <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <title>佐瀬家アプリ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="home.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
-  <div class="bg-orbs">
-    <div class="orb orb1"></div>
-    <div class="orb orb2"></div>
-    <div class="orb orb3"></div>
-  </div>
-
-  <div class="page">
-    <header class="hero">
-      <div class="hero-icon">🏠</div>
-      <h1 class="hero-title">佐瀬家アプリ</h1>
-      <p class="hero-sub">家族のためのアプリ一覧</p>
-    </header>
-
-    <main class="app-grid" id="appGrid"></main>
-
-    <!-- ダッシュボード -->
-    <section class="dashboard">
-      <div class="section-divider">
-        <span class="section-label">ダッシュボード</span>
-      </div>
-
-      <div class="dash-grid">
-
-        <!-- 最新写真（全幅） -->
-        <a href="https://koto-chan.vercel.app/" target="_blank" rel="noopener"
-           class="dash-card card-photo" id="cardPhoto">
-          <div class="dash-card-label">📸 最新のことね</div>
-          <div class="photo-content" id="photoContent">
-            <div class="dash-skeleton photo-skeleton"></div>
-          </div>
-        </a>
-
-        <!-- 今週の予定（全幅） -->
-        <a href="https://fufu-yotei.vercel.app/" target="_blank" rel="noopener"
-           class="dash-card card-yotei" id="cardYotei">
-          <div class="dash-card-label">📅 今週の予定</div>
-          <div id="yoteiContent">
-            <div class="dash-skeleton dash-skeleton-line"></div>
-            <div class="dash-skeleton dash-skeleton-line" style="margin-top:8px;width:80%"></div>
-          </div>
-        </a>
-
-        <!-- 前回のキャンプ -->
-        <a href="https://fami-camp.vercel.app/" target="_blank" rel="noopener"
-           class="dash-card card-last-camp" id="cardLastCamp">
-          <div class="dash-card-label">🏕️ 前回のキャンプ</div>
-          <div id="campLastContent">
-            <div class="dash-skeleton dash-skeleton-line"></div>
-            <div class="dash-skeleton dash-skeleton-line" style="margin-top:8px;width:70%"></div>
-          </div>
-        </a>
-
-        <!-- 次のキャンプ -->
-        <a href="https://fami-camp.vercel.app/" target="_blank" rel="noopener"
-           class="dash-card card-camp" id="cardCamp">
-          <div class="dash-card-label">🏕️ 次のキャンプ</div>
-          <div id="campContent">
-            <div class="dash-skeleton dash-skeleton-line"></div>
-            <div class="dash-skeleton dash-skeleton-line" style="margin-top:8px;width:60%"></div>
-          </div>
-        </a>
-
-        <!-- ことねの成長 -->
-        <div class="dash-card card-age">
-          <div class="dash-card-label">🍀 ことねの成長</div>
-          <div class="age-display" id="ageDisplay">
-            <span class="age-num" id="ageYears">-</span><span class="age-unit">歳</span>
-            <span class="age-num" id="ageMonths">-</span><span class="age-unit">ヶ月</span>
-          </div>
-          <div class="age-days" id="ageDays">計算中…</div>
-          <div class="age-next" id="ageNext"></div>
-        </div>
-
-        <!-- 話し合いトピック -->
-        <a href="https://konya-hanaso.vercel.app/" target="_blank" rel="noopener"
-           class="dash-card card-topics" id="cardTopics">
-          <div class="dash-card-label">💬 話し合いたいこと</div>
-          <div id="topicsContent">
-            <div class="dash-skeleton dash-skeleton-line"></div>
-            <div class="dash-skeleton dash-skeleton-line" style="margin-top:8px;width:75%"></div>
-          </div>
-        </a>
-
-      </div>
-    </section>
-
-    <footer class="footer">
-      <p>佐瀬家 プライベートアプリ</p>
-    </footer>
-  </div>
-
-  <script>
+<div class="page">
+ <header class="hero"><div><p class="eyebrow" id="homeDate"></p><h1>本日の佐瀬家</h1><p class="hero-sub">予定も、思い出も。ここから。</p></div><span class="home-symbol" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" focusable="false"><path d="M8 21 24 8l16 13v18a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3Z" fill="currentColor" opacity=".09"/><path d="M5 22 22.1 8.1a3 3 0 0 1 3.8 0L43 22M10 20v19a3 3 0 0 0 3 3h22a3 3 0 0 0 3-3V20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 32s-7-4.1-7-8a3.8 3.8 0 0 1 7-2 3.8 3.8 0 0 1 7 2c0 3.9-7 8-7 8Z" fill="currentColor"/></svg></span></header>
+ <main id="homePanel">
+  <section class="today-panel"><div class="section-heading"><h2>今日の予定</h2><button id="refreshHome" type="button">更新</button></div><div id="todayContent" aria-live="polite">読み込み中…</div></section>
+  <div class="quick-actions"><a href="https://fufu-yotei.vercel.app/?action=add">＋ 予定を追加</a><a href="https://muscle-log-phi.vercel.app/?action=start">▶ 筋トレを開始</a></div>
+  <section class="dashboard"><div class="section-heading"><h2>家族のダッシュボード</h2><span id="updateStatus" role="status"></span></div>
+   <details class="display-settings"><summary>表示する情報を選ぶ</summary><p>この端末だけに反映されます。</p><div class="display-options">
+    <label><input type="checkbox" data-card="card-muscle" checked>パパの筋トレ</label>
+    <label><input type="checkbox" data-card="card-camp" checked>次のキャンプ</label>
+    <label><input type="checkbox" data-card="card-topics" checked>話し合いたいこと</label>
+    <label><input type="checkbox" data-card="card-photo" checked>最新のことね</label>
+    <label><input type="checkbox" data-card="card-age" checked>ことねの成長</label>
+    <label><input type="checkbox" data-card="card-last-camp" checked>前回のキャンプ</label>
+   </div><p id="displayStatus" role="status"></p></details>
+   <div class="dash-grid">
+   <section class="dash-card card-yotei"><div class="section-heading"><h3>今週の予定</h3><a href="https://fufu-yotei.vercel.app/">すべて見る →</a></div><div id="yoteiContent">読み込み中…</div></section>
+   <a class="dash-card card-muscle" href="https://muscle-log-phi.vercel.app/"><h3>パパの筋トレ</h3><div id="muscleContent">読み込み中…</div><span class="card-cta">記録を開く →</span></a>
+   <a class="dash-card card-camp" id="cardCamp" href="https://fami-camp.vercel.app/"><h3>次のキャンプ</h3><div id="campContent">読み込み中…</div><span class="card-cta">準備を確認 →</span></a>
+   <section class="dash-card card-topics"><div class="section-heading"><h3>話し合いたいこと</h3><a href="https://konya-hanaso.vercel.app/">開く →</a></div><div id="topicsContent">読み込み中…</div></section>
+   <a class="dash-card card-photo" id="cardPhoto" href="https://koto-chan.vercel.app/"><h3 class="dash-card-label">最新のことね</h3><div class="photo-content" id="photoContent">読み込み中…</div></a>
+   <div class="dash-card card-age"><h3>ことねの成長</h3><div class="age-display"><span class="age-num" id="ageYears">—</span>歳 <span class="age-num" id="ageMonths">—</span>ヶ月</div><p id="ageDays"></p></div>
+   <a class="dash-card card-last-camp" href="https://fami-camp.vercel.app/"><h3>前回のキャンプ</h3><div id="campLastContent">読み込み中…</div></a>
+  </div></section>
+ </main>
+ <section id="appsPanel" hidden><div class="section-heading"><h2>家族のアプリ</h2></div><div class="app-grid" id="appGrid"></div></section>
+ <footer class="footer">家族の毎日を、少し心地よく。</footer>
+</div>
+<nav class="home-nav" aria-label="メインメニュー">
+ <a href="#home" data-panel="home" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7M5 9v11h5v-6h4v6h5V9"/></svg><span>ホーム</span></a>
+ <a href="https://fufu-yotei.vercel.app/"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16m-12 4h2m4 0h2m-8 3h2"/></svg><span>予定</span></a>
+ <a href="#apps" data-panel="apps"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>アプリ</span></a>
+</nav>
+<script>
     // ===== アプリ一覧 =====
     var APPS = [
       {
@@ -161,10 +103,10 @@
 
     function renderApps() {
       var grid = document.getElementById('appGrid');
-      APPS.forEach(function(app) {
+      [APPS[3], APPS[4], APPS[2], APPS[1], APPS[0], APPS[5]].forEach(function(app) {
         var card = document.createElement('a');
         card.href      = app.url;
-        card.target    = '_blank';
+        card.target    = '_self';
         card.rel       = 'noopener noreferrer';
         card.className = 'app-card';
         card.innerHTML =
@@ -191,18 +133,12 @@
     }
 
     // 年齢計算
-    function calcAge() {
-      var now    = new Date();
-      var years  = now.getFullYear() - BIRTHDAY.getFullYear();
-      var months = now.getMonth()    - BIRTHDAY.getMonth();
-      if (months < 0) { years--; months += 12; }
-      var days = Math.floor((now - BIRTHDAY) / 86400000);
-      // 次の月齢まで何日か
-      var nextBday = new Date(BIRTHDAY);
-      nextBday.setFullYear(now.getFullYear());
-      nextBday.setMonth(BIRTHDAY.getMonth() + Math.floor((now - BIRTHDAY) / (30.44 * 86400000)) + 1);
-      var daysToNext = Math.ceil((nextBday - now) / 86400000);
-      return { years: years, months: months, days: days, daysToNext: daysToNext };
+    function calcAge(now) {
+      now = now || new Date();
+      var totalMonths = (now.getFullYear()-BIRTHDAY.getFullYear())*12+now.getMonth()-BIRTHDAY.getMonth();
+      if (now.getDate() < BIRTHDAY.getDate()) totalMonths--;
+      var days = Math.floor((Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())-Date.UTC(2024,1,19))/86400000);
+      return {years:Math.floor(totalMonths/12), months:totalMonths%12, days:days};
     }
 
     function renderAge() {
@@ -221,9 +157,10 @@
           .select('post_date, image_url, comment')
           .order('post_date', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        if (r.error || !r.data) {
+        if (r.error) throw r.error;
+        if (!r.data) {
           el.innerHTML = '<div class="dash-empty-photo">📷 まだ写真がありません</div>';
           return;
         }
@@ -249,18 +186,21 @@
       try {
         var r = await db
           .from('camps')
-          .select('title, campsite_name, start_date, end_date, camp_members(name)')
+          .select('id, title, campsite_name, start_date, end_date, camp_members(name)')
           .eq('status', 'planned')
+          .or('start_date.gte.'+yoteiDateStr(new Date())+',end_date.gte.'+yoteiDateStr(new Date())+',start_date.is.null')
           .order('start_date', { ascending: true, nullsFirst: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        if (r.error || !r.data) {
+        if (r.error) throw r.error;
+        if (!r.data) {
           el.innerHTML = '<div class="camp-empty">⛺ 予定なし</div>';
           return;
         }
 
         var c = r.data;
+        document.getElementById("cardCamp").href = "https://fami-camp.vercel.app/?camp=" + encodeURIComponent(c.id);
         var dateStr = '';
         if (c.start_date) {
           var d = new Date(c.start_date + 'T00:00:00');
@@ -293,9 +233,10 @@
           .eq('status', 'completed')
           .order('start_date', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        if (r.error || !r.data) {
+        if (r.error) throw r.error;
+        if (!r.data) {
           el.innerHTML = '<div class="camp-empty">まだ記録がありません</div>';
           return;
         }
@@ -334,6 +275,7 @@
           .eq('is_resolved', false)
           .order('created_at', { ascending: false });
 
+        if (r.error) throw r.error;
         var data = (r.data || []).sort(function(a, b) {
           if (a.priority === 'urgent' && b.priority !== 'urgent') return -1;
           if (b.priority === 'urgent' && a.priority !== 'urgent') return 1;
@@ -348,12 +290,12 @@
         var html = '<div class="topics-count">' + data.length + ' 件 話し合い待ち</div>';
         data.slice(0, 4).forEach(function(t) {
           html +=
-            '<div class="topic-row">' +
+            '<a class="topic-row" href="https://konya-hanaso.vercel.app/?topic=' + encodeURIComponent(t.id) + '">' +
               (t.priority === 'urgent'
                 ? '<span class="topic-dot urgent">🔥</span>'
                 : '<span class="topic-dot">·</span>') +
               '<span class="topic-text">' + esc(t.title) + '</span>' +
-            '</div>';
+            '</a>';
         });
         if (data.length > 4) {
           html += '<div class="topics-more">他 ' + (data.length - 4) + ' 件…</div>';
@@ -386,72 +328,77 @@
       return (d.getMonth() + 1) + '/' + d.getDate() + '（' + YOTEI_DAYS_JA[d.getDay()] + '）';
     }
 
-    async function loadYotei() {
-      var el = document.getElementById('yoteiContent');
-      if (!el) return;
-      try {
-        var today = new Date();
-        var end   = new Date(today);
-        end.setDate(end.getDate() + 7);
-
-        var r = await db
-          .from('schedules')
-          .select('date, date_end, member, event_type, event_label, time_type, confirmed, return_time, needs_dinner')
-          .gte('date', yoteiDateStr(today))
-          .lte('date', yoteiDateStr(end))
-          .order('date');
-
-        if (r.error) throw r.error;
-
-        var data = r.data || [];
-        if (data.length === 0) {
-          el.innerHTML = '<p class="dash-empty">今週の予定はありません 📭</p>';
-          return;
-        }
-
-        var EMOJIS = {
-          '在宅': '🏠', '早朝出社': '🌅', '出社': '🏢', '遅晩出社': '🌙',
-          '出張': '✈️', '飲み会': '🍻', '保育園イベント': '🎒', 'custom': '✏️'
-        };
-
-        var html = '';
-        data.slice(0, 5).forEach(function (s) {
-          var m     = YOTEI_MEMBERS[s.member] || { label: s.member, color: '#999' };
-          var emoji = s.event_type === 'custom' ? '✏️' : (EMOJIS[s.event_type] || '📅');
-          var label = s.event_type === 'custom' ? (s.event_label || '自由記述') : s.event_type;
-          var subParts = [];
-          if (s.return_time) {
-            subParts.push('<span class="yotei-return">🕐 ' + s.return_time.slice(0, 5) + '</span>');
-          }
-          if (s.needs_dinner === true) {
-            subParts.push('<span class="yotei-dinner">🍚 晩飯いる</span>');
-          } else if (s.needs_dinner === false) {
-            subParts.push('<span class="yotei-no-dinner">🙅 晩飯いらない</span>');
-          }
-          html +=
-            '<div class="yotei-row">' +
-              '<span class="yotei-dot" style="background:' + m.color + '"></span>' +
-              '<span class="yotei-date">' + yoteiFormatDate(s.date) + (s.date_end && s.date_end !== s.date ? '〜' + yoteiFormatDate(s.date_end) : '') + '</span>' +
-              '<span class="yotei-member" style="color:' + m.color + '">' + esc(m.label) + '</span>' +
-              '<span class="yotei-label">' + emoji + ' ' + esc(label) + '</span>' +
-              (s.confirmed ? '<span class="yotei-check">✓</span>' : '') +
-              (subParts.length ? '<div class="yotei-sub">' + subParts.join('') + '</div>' : '') +
-            '</div>';
-        });
-        if (data.length > 5) {
-          html += '<div class="topics-more">他 ' + (data.length - 5) + ' 件…</div>';
-        }
-        el.innerHTML = html;
-      } catch (e) {
-        console.error('loadYotei error:', e);
-        if (el) el.innerHTML = '<p class="dash-empty">今週の予定はありません 📭</p>';
-      }
+    function scheduleRows(data) {
+      return data.map(function(s) {
+        var m=YOTEI_MEMBERS[s.member] || {label:'みんな',color:'#32785b'};
+        var label=s.event_type==='custom' ? s.event_label || '予定' : s.event_type;
+        return '<a class="yotei-row" href="https://fufu-yotei.vercel.app/?date='+encodeURIComponent(s.date)+'&schedule='+encodeURIComponent(s.id)+'"><span class="yotei-date">'+yoteiFormatDate(s.date)+'</span><span class="yotei-member" style="color:'+m.color+'">'+esc(m.label)+'</span><span class="yotei-label">'+esc(label)+'</span><span class="yotei-check">'+(s.confirmed?'確認済み':'確認待ち')+'</span><span class="yotei-sub">'+(s.time_start?esc(s.time_start.slice(0,5))+'　':'')+(s.return_time?'帰宅 '+esc(s.return_time.slice(0,5))+'　':'')+(s.needs_dinner===true?'夕食あり':s.needs_dinner===false?'夕食なし':'')+'</span></a>';
+      }).join('');
     }
-
+    async function loadYotei() {
+      var el=document.getElementById('yoteiContent'), todayEl=document.getElementById('todayContent');
+      try {
+        var today=yoteiDateStr(new Date()), end=new Date(); end.setDate(end.getDate()+6);
+        var r=await db.from('schedules').select('id,date,date_end,member,event_type,event_label,time_start,confirmed,return_time,needs_dinner').is('is_private',null).lte('date',yoteiDateStr(end)).or('date.gte.'+today+',date_end.gte.'+today).order('date').order('time_start');
+        if(r.error) throw r.error;
+        var data=r.data || [], current=data.filter(function(s){return s.date<=today && (s.date_end || s.date)>=today;});
+        todayEl.innerHTML=current.length?scheduleRows(current):'<p class="empty">今日は登録された予定がありません。</p>';
+        el.innerHTML=data.length?scheduleRows(data.slice(0,7))+(data.length>7?'<p class="topics-more">ほか '+(data.length-7)+' 件 · すべて見るから確認</p>':''):'<p class="empty">今週の予定はまだありません。</p>';
+      } catch(e) { el.innerHTML='<p class="empty">予定を読み込めませんでした。上の「更新」で再試行できます。</p>'; todayEl.innerHTML=el.innerHTML; }
+    }
+    async function loadMuscle() {
+      var el=document.getElementById('muscleContent');
+      try {
+        var r=await db.from('workout_sessions').select('date').order('date',{ascending:false}).limit(1).maybeSingle();
+        if(r.error) throw r.error;
+        el.innerHTML=r.data?'<p class="metric">前回 '+yoteiFormatDate(r.data.date)+'</p><p class="empty">今日の記録を続けましょう。</p>':'<p class="empty">最初のトレーニングを記録しましょう。</p>';
+      } catch(e) {el.innerHTML='<p class="empty">記録を読み込めませんでした。</p>';}
+    }
+    async function refreshHome() {
+      var button=document.getElementById('refreshHome'); button.disabled=true;button.textContent='更新中';
+      await Promise.allSettled([loadLatestPhoto(),loadTopics(),loadNextCamp(),loadLastCamp(),loadYotei(),loadMuscle()]);
+      button.disabled=false;button.textContent='更新';
+      document.getElementById('updateStatus').textContent='最終取得 '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    }
+    function showPanel() {
+      var apps=location.hash==='#apps';
+      document.getElementById('homePanel').hidden=apps;document.getElementById('appsPanel').hidden=!apps;
+      document.querySelectorAll('[data-panel]').forEach(function(a){if((a.dataset.panel==='apps')===apps)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+    }
+    function setupDisplaySettings() {
+      var saved = {};
+      try { saved = JSON.parse(localStorage.getItem('sase-home-display-v1') || '{}') || {}; } catch (e) {}
+      var inputs = document.querySelectorAll('[data-card]');
+      function apply() {
+        inputs.forEach(function(input) {
+          document.querySelector('.' + input.dataset.card).hidden = !input.checked;
+        });
+      }
+      inputs.forEach(function(input) {
+        input.checked = saved[input.dataset.card] !== false;
+        input.addEventListener('change', function() {
+          apply();
+          var settings = {};
+          inputs.forEach(function(item) { settings[item.dataset.card] = item.checked; });
+          try {
+            localStorage.setItem('sase-home-display-v1', JSON.stringify(settings));
+            document.getElementById('displayStatus').textContent = '表示設定を保存しました';
+          } catch (e) {
+            document.getElementById('displayStatus').textContent = 'この画面には反映しました。端末への保存はできませんでした。';
+          }
+        });
+      });
+      apply();
+    }
     // 初期化
     async function init() {
       renderApps();
       renderAge();
+      setupDisplaySettings();
+      showPanel();
+      document.getElementById("homeDate").textContent=new Date().toLocaleDateString("ja-JP",{month:"long",day:"numeric",weekday:"long"});
+      window.addEventListener("hashchange",showPanel);
+      document.getElementById("refreshHome").addEventListener("click",refreshHome);
 
       try {
         var res = await fetch('config.json');
@@ -462,15 +409,12 @@
         document.getElementById('photoContent').innerHTML  = '<div class="dash-empty-photo">接続エラー</div>';
         document.getElementById('topicsContent').innerHTML = '<p class="dash-empty">接続エラー</p>';
         document.getElementById('yoteiContent').innerHTML  = '<p class="dash-empty">接続エラー</p>';
+        ["todayContent","muscleContent","campContent","campLastContent"].forEach(function(id){document.getElementById(id).textContent="接続できませんでした。ページを再読み込みしてください。";});
+        document.getElementById("refreshHome").onclick=function(){location.reload();};
         return;
       }
 
-      // 各ウィジェットを独立して実行（1つのエラーが他に影響しない）
-      loadLatestPhoto();
-      loadTopics();
-      loadNextCamp();
-      loadLastCamp();
-      loadYotei();
+      await refreshHome();
     }
 
     init();
