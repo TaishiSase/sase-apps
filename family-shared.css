@@ -6,3 +6,23 @@
 .family-page{max-width:640px;margin:auto;padding:24px 20px calc(40px + env(safe-area-inset-bottom));font-family:-apple-system,BlinkMacSystemFont,'Noto Sans JP',sans-serif}.family-page h1{font-size:28px;margin:12px 0}.family-page p{line-height:1.7}.family-page .intro{color:var(--family-muted);font-size:14px;margin:8px 0 24px}.family-page label{display:flex;flex-direction:column;gap:8px;font-size:14px;margin:16px 0}.family-page input,.family-page textarea{width:100%;min-width:0;border:1px solid #9cad9e;background:transparent;color:inherit;border-radius:12px;padding:13px;font:inherit;font-size:16px}.family-page button,.family-page .button-link{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border:1px solid var(--family-line);border-radius:13px;padding:12px 18px;font:inherit;color:inherit;background:transparent;cursor:pointer}.family-page button.primary{background:var(--family-green);color:white;border:0}.family-page button:disabled{opacity:.5}.family-page button[aria-pressed=true]{background:#e1ecdf;color:#234d36;border-color:#668465}.family-page .account-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}.family-page .panel{border:1px solid var(--family-line);border-radius:22px;padding:20px;margin:20px 0;background:#fff}.family-page .actions{display:flex;flex-wrap:wrap;gap:10px}.family-page .status{font-size:14px;min-height:24px;margin:12px 0;color:var(--family-muted)}.family-page .items{display:flex;flex-direction:column;gap:10px;margin-top:20px}.family-page .item{border:1px solid var(--family-line);border-radius:18px;padding:16px;overflow-wrap:anywhere;background:#fff}.family-page .item h2{font-size:18px;margin:0 0 8px}.family-page .item p{white-space:pre-wrap;font-size:14px}.family-page .item.done .item-title{text-decoration:line-through;opacity:.6}.family-page .item-row{display:flex;align-items:center;gap:12px}.family-page .item-row .item-title{flex:1}.family-page .item-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.family-page .item-actions a{display:inline-flex;align-items:center;min-height:44px;font-size:13px;color:var(--family-green)}.family-page .small{font-size:12px;color:var(--family-muted)}.family-page .pin{letter-spacing:.5em;text-align:center;font-size:24px;max-width:240px}.family-page a:focus-visible,.family-page button:focus-visible,.family-page input:focus-visible{outline:3px solid #8cab79;outline-offset:3px}
 @media(prefers-color-scheme:dark){:root{--family-green:#b5d3bc;--family-line:#47584c;--family-muted:#b5c6b8}.family-page .panel,.family-page .item{background:#26322b}.family-page button.primary{background:#456d50;color:#fff}.family-page button[aria-pressed=true]{background:#3c5c44;color:#ebf4e6}}
 @media(prefers-reduced-motion:no-preference){.family-page button{transition:background .15s ease,transform .15s ease}.family-page button:active{transform:scale(.98)}}
+
+/* Calm, distinct accents for everyday lists and sign-in choices. */
+.family-page .passkey-button{width:100%;background:#e7edf8;border-color:#b7c9e5;color:#304e78;font-weight:600}
+.auth-divider{display:flex;align-items:center;gap:12px;color:var(--family-muted);font-size:12px;margin:24px 0}
+.auth-divider:before,.auth-divider:after{content:'';height:1px;flex:1;background:var(--family-line)}
+.family-page .panel.is-editing{border-color:#557e62;box-shadow:0 0 0 2px #557e621a}
+.family-page .panel>button+button{margin-left:8px}
+body[data-kind=shopping] .family-page h1{color:#315c47}
+body[data-kind=outings] .family-page h1{color:#805427}
+body[data-kind=outings] .family-page .panel{background:#fffcf6}
+body[data-kind=outings] .family-page button.primary{background:#805427;color:#fff}
+.family-page .item-actions{border-top:1px solid var(--family-line);padding-top:10px}
+.family-page .item-actions button{font-size:13px;min-height:44px;padding:8px 14px}
+@media(prefers-color-scheme:dark){
+ .family-page .passkey-button{background:#2b3d55;color:#d0e2ff;border-color:#6682a4}
+ body[data-kind=shopping] .family-page h1{color:#b6d6bf}
+ body[data-kind=outings] .family-page h1{color:#e7c49a}
+ body[data-kind=outings] .family-page .panel{background:#322e25}
+ body[data-kind=outings] .family-page button.primary{background:#926333}
+}
