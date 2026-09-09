@@ -4,21 +4,15 @@
   "description": "ふたりの話し合いノート",
   "start_url": "/talk/",
   "display": "standalone",
-  "background_color": "#FEF3C7",
-  "theme_color": "#F59E0B",
+  "background_color": "#f2f8fb",
+  "theme_color": "#f2f8fb",
   "lang": "ja",
   "icons": [
     {
-      "src": "/talk/icon-192.png",
-      "sizes": "192x192",
+      "src": "/brand/sase-home-icon.png",
+      "sizes": "1254x1254",
       "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/talk/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "scope": "/",

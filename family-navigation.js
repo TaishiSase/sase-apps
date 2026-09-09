@@ -10,16 +10,16 @@
   function publish(type,dx){if(embedded)parent.postMessage({type,dx},location.origin);else handle(type,dx);}
   function handle(type,dx){
    if(!isShell)return;
-   const i=activeIndex(),direction=dx<0?1:-1,next=panels[i+direction];
+   const i=activeIndex(),direction=dx>0?1:-1,next=panels[i+direction];
    if(type==='family-drag'){
     dragged=document.getElementById(panels[i]+'Panel');dragged.classList.remove('panel-enter');dragged.style.transition='none';
     dragged.style.transform='translateX('+(next?dx:dx*.18)+'px)';
     document.body.classList.add('family-dragging');
-    document.body.style.setProperty('--nav-drag',Math.max(-1,Math.min(1,-dx/innerWidth)));
+    document.body.style.setProperty('--nav-drag',Math.max(-1,Math.min(1,dx/innerWidth)));
    }else{
     if(dragged){dragged.style.transition=type==='family-settle'?'transform .22s ease':'';dragged.style.transform='';dragged=null;}
     document.body.classList.remove('family-dragging');document.body.style.setProperty('--nav-drag',0);
-    if(type==='family-commit' && next){window.familySwipeEntry=(direction>0?1:-1)*Math.max(0,innerWidth-Math.abs(dx));location.hash=next;}
+    if(type==='family-commit' && next){window.familySwipeEntry=(direction>0?-1:1)*Math.max(0,innerWidth-Math.abs(dx));location.hash=next;}
    }
   }
   document.addEventListener('click',e=>{if(Date.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
@@ -52,7 +52,7 @@
    suppressClickUntil=Date.now()+400;
    if(g.target.hasPointerCapture(e.pointerId))g.target.releasePointerCapture(e.pointerId);
    const commit=!cancelled && (Math.abs(g.dx)>Math.min(80,innerWidth*.18) || (Math.abs(g.dx)>28 && Math.abs(g.dx)/Math.max(1,e.timeStamp-g.time)>.45));
-   if(!embedded && !isShell && commit){const next=panels[activeIndex()+(g.dx<0?1:-1)];if(next)location.href='/#'+next;return;}
+   if(!embedded && !isShell && commit){const next=panels[activeIndex()+(g.dx>0?1:-1)];if(next)location.href='/#'+next;return;}
    publish(commit?'family-commit':'family-settle',g.dx);
   }
   document.addEventListener('pointerup',e=>finish(e,false));
@@ -73,6 +73,12 @@
    });
    return;
   }
+  const brand=document.createElement('header');brand.className='brand-header';
+  const titles={calendar:'夫婦の共有予定帳',muscle:'パパの筋トレ記録',camp:'ふぁみキャン△',talk:'こんや話そ',photo:'今日のことちゃん',shopping:'佐瀬家のお買いもの',outings:'週末どこ行く？','yomechan-startup':'嫁ちゃん起業奮闘記',account:'アカウント'};
+  const section=location.pathname.split('/')[1].replace(/\.html$/,'');
+  brand.innerHTML='<a class="brand-title-link" href="/#home"><span class="brand-kicker">FAMILY, CONNECTED.</span><strong id="brandTitle"></strong></a><a class="brand-mark" href="/#home" aria-label="佐瀬家ホーム"><img src="/brand/concept-a.png" width="50" height="50" alt="SASE"></a>';
+  brand.querySelector('#brandTitle').textContent=isShell&&location.hash==='#schedule'?titles.calendar:titles[section]||'SASE HOME app';
+  document.body.prepend(brand);const existingAccount=document.querySelector('.family-account-bar');if(existingAccount)brand.appendChild(existingAccount);
   if(nav)return;
   if(!document.body.matches('[data-kind]') && !location.pathname.startsWith('/calendar'))return;
   const bar=document.createElement('nav');bar.className='home-nav';bar.setAttribute('aria-label','メインメニュー');

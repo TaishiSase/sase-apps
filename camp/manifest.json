@@ -4,21 +4,15 @@
   "description": "キャンプの計画・記録帳",
   "start_url": "/camp/",
   "display": "standalone",
-  "background_color": "#D1FAE5",
-  "theme_color": "#2D6A4F",
+  "background_color": "#f2f8fb",
+  "theme_color": "#f2f8fb",
   "lang": "ja",
   "icons": [
     {
-      "src": "/camp/icon-192.png",
-      "sizes": "192x192",
+      "src": "/brand/sase-home-icon.png",
+      "sizes": "1254x1254",
       "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/camp/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "scope": "/",

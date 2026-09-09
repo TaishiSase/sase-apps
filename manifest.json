@@ -1,1 +1,16 @@
-{"name":"佐瀬家アプリ","short_name":"佐瀬家","start_url":"/","display":"standalone","background_color":"#f6f5f0","theme_color":"#f6f5f0","icons":[{"src":"apple-touch-icon.png","sizes":"180x180","type":"image/png"}]}
+{
+  "name": "SASE HOME app",
+  "short_name": "SASE",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2f8fb",
+  "theme_color": "#f2f8fb",
+  "icons": [
+    {
+      "src": "/brand/sase-home-icon.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
