@@ -20,8 +20,8 @@
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link rel="stylesheet" href="family-ux.css">
-<link rel="stylesheet" href="/family-polish.css"><script src="/family-navigation.js" defer></script><link rel="stylesheet" href="/brand-theme.css"><link rel="apple-touch-icon" href="/brand/sase-home-icon.png"></head>
-<body>
+<link rel="stylesheet" href="/family-polish.css"><script src="/family-navigation.js" defer></script><link rel="stylesheet" href="/brand-theme.css"><link rel="apple-touch-icon" href="/brand/sase-home-icon.png"><link rel="stylesheet" href="/family-finish.css"></head>
+<body data-suite="talk">
 <div class="family-bar"><a href="https://sase-apps.vercel.app/">‹ 佐瀬家ホーム</a><a href="https://sase-apps.vercel.app/#apps">アプリ一覧</a></div><p id="familyStatus" class="family-status" role="status"></p>
 
   <!-- 認証画面 -->
@@ -98,7 +98,7 @@
     <!-- ボトムナビ -->
     <nav class="bottom-nav">
       <button class="bnav-btn" data-page="topics" onclick="goToPage('topics')">
-        <span class="bnav-icon">💬</span>
+        <span class="bnav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11a8 8 0 0 1-8 8H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="M7 8h10M7 12h6"/></svg></span>
         <span class="bnav-label">話したいこと</span>
       </button>
       <button class="bnav-btn add-btn" onclick="showAddModal()">
@@ -106,7 +106,7 @@
         <span class="bnav-label">追加</span>
       </button>
       <button class="bnav-btn" data-page="history" onclick="goToPage('history')">
-        <span class="bnav-icon">✅</span>
+        <span class="bnav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></span>
         <span class="bnav-label">解決済み</span>
       </button>
     </nav>

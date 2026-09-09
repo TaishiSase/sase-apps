@@ -21,8 +21,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <link rel="stylesheet" href="family-ux.css">
-<link rel="stylesheet" href="/family-polish.css"><script src="/family-navigation.js" defer></script><link rel="stylesheet" href="/brand-theme.css"><link rel="apple-touch-icon" href="/brand/sase-home-icon.png"></head>
-<body>
+<link rel="stylesheet" href="/family-polish.css"><script src="/family-navigation.js" defer></script><link rel="stylesheet" href="/brand-theme.css"><link rel="apple-touch-icon" href="/brand/sase-home-icon.png"><link rel="stylesheet" href="/family-finish.css"></head>
+<body data-suite="photo">
 <div class="family-bar"><a href="https://sase-apps.vercel.app/">‹ 佐瀬家ホーム</a><a href="https://sase-apps.vercel.app/#apps">アプリ一覧</a></div><p id="familyStatus" class="family-status" role="status"></p>
 
   <!-- メインアプリ -->
@@ -118,7 +118,7 @@
     <!-- ボトムナビ -->
     <nav class="bottom-nav">
       <button class="bnav-btn" data-page="today" onclick="goToPage('today')">
-        <span class="bnav-icon">🏠</span>
+        <span class="bnav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/></svg></span>
         <span class="bnav-label">今日</span>
       </button>
       <button class="bnav-btn" data-page="post" onclick="goToPage('post')">
@@ -126,11 +126,11 @@
         <span class="bnav-label">投稿</span>
       </button>
       <button class="bnav-btn" data-page="list" onclick="goToPage('list')">
-        <span class="bnav-icon">📚</span>
+        <span class="bnav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 4v16m4-5 3-4 3 4m-5-7h.01"/></svg></span>
         <span class="bnav-label">一覧</span>
       </button>
       <button class="bnav-btn" data-page="favorites" onclick="goToPage('favorites')">
-        <span class="bnav-icon">⭐</span>
+        <span class="bnav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z"/></svg></span>
         <span class="bnav-label">お気に入り</span>
       </button>
     </nav>

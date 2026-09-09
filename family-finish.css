@@ -1,0 +1,45 @@
+/* Final shared details. Movement stays short, interruptible and optional. */
+:root{--sase-blue:#25698e;--sase-gold:#d59a2d;--sase-red:#b9505b;--sase-ease:cubic-bezier(.22,.75,.25,1)}
+html{scroll-padding-bottom:100px}body{-webkit-text-size-adjust:100%}
+button,a,input,textarea,select,summary{-webkit-tap-highlight-color:transparent}
+button,a,summary{touch-action:manipulation}button:not(:disabled),summary{cursor:pointer}
+:is(button,a,input,textarea,select,summary):focus-visible{outline:3px solid #4499bb;outline-offset:3px}
+input,textarea,select{accent-color:var(--sase-blue)}input[type=date],input[type=time],input[type=month]{min-width:0;max-width:100%}
+.brand-mark img{box-shadow:0 3px 12px #244b6010}.brand-header .family-account-bar a{opacity:1}
+.family-app-icon{background:#edf5f9}.home-nav a{flex-shrink:1;min-width:0;min-height:52px}.home-nav a:before{pointer-events:none}
+.home-nav a[aria-current]:after{background:var(--sase-gold)}
+.agenda-essentials>span{background:#e6f3f8;color:#28617d}.agenda-essentials>span[data-state=unknown]{background:#fcf2dd;color:#84621e}.agenda-essentials>span[data-state=unavailable]{background:#f9e9eb;color:#a14652}
+.family-page .list-filters{background:#e5eff5}.family-page .list-filters button[aria-pressed=true]{color:#245e7c;background:#fff}.family-page button[aria-pressed=true]{background:#e4f1f7;border-color:#78aec5;color:#235f7e}
+body[data-kind] .family-page h1{color:var(--family-ink)}body[data-kind] .family-page .panel{background:#fff;position:relative}
+body[data-kind] .family-page .panel:before{content:'';position:absolute;top:0;left:22px;width:32px;height:3px;border-radius:0 0 3px 3px;background:var(--sase-gold)}
+body[data-kind] .family-page button.primary{background:#25698e;color:white}.family-page .item.done{background:#edf4f7}.family-page .panel.is-editing{border-color:#4b95b5;box-shadow:0 0 0 3px #4b95b515}
+.family-page .item-actions .item-delete{color:var(--sase-red);border-color:#ecd1d6}.family-page [aria-busy=true]{cursor:progress}.family-page .status[data-state=error]{color:var(--sase-red)}
+.family-page textarea{resize:vertical;min-height:100px}.family-page .item-row .item-title{min-width:0}.family-page .panel>button+button{margin-left:0}.family-page .panel>button{margin-right:8px;margin-top:4px}
+/* The three journals retain their content accents within the same blue canvas. */
+body[data-suite]{--bg:#f2f8fb;--cream:#f2f8fb;--card:#fff;--white:#fff;--text:#193b54;--muted:#607d90;--border:#d7e6ef;--green:#235b7c;--green-mid:#2b7e9e;--green-light:#60abc0;--orange:#287b9f;--orange-dark:#245f80;--orange-light:#8bc6d8;--orange-pale:#e4f2f8;--rose:#307e9f;--rose-dark:#235f80;--rose-light:#8dc5d7;--rose-pale:#e6f3f8;--shadow-sm:0 3px 12px #244b600a;--shadow-md:0 6px 22px #244b6010;--shadow-lg:0 12px 36px #244b6018;background:var(--bg);color:var(--text);color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans JP',sans-serif}
+body[data-suite] .brand-header{background:#f2f8fb}body[data-suite] .brand-title-link{color:#193b54}body[data-suite] .brand-kicker{color:#39839d}body[data-suite] .brand-header .family-account-bar a{color:#607d90}
+body[data-suite] .app-header{background:#f8fcffed;border-color:var(--border);color:var(--text)}body[data-suite] .header-title{color:#235f80}
+body[data-suite=camp] .app-header{background:linear-gradient(115deg,#204b72,#348ba9);color:white}
+body[data-suite] :is(.camp-card,.topic-card,.dash-stat,.dash-camp-card,.post-form){border-radius:20px;box-shadow:var(--shadow-sm);border-color:var(--border)}
+body[data-suite] .topic-card{border-left-color:#63abc2}body[data-suite] .topic-card.urgent{border-left-color:var(--sase-red)}
+body[data-suite] .bottom-nav{height:calc(var(--bnav-h) + env(safe-area-inset-bottom));background:#fafdfff2;border-color:var(--border);box-shadow:0 -3px 18px #254b6406}
+body[data-suite] .main-app{padding-bottom:calc(var(--bnav-h) + env(safe-area-inset-bottom) + 16px)}
+body[data-suite] .bnav-btn{color:#648496;margin:5px 4px;border-radius:14px}body[data-suite] .bnav-btn.active{background:#e3f1f7;color:#245f80}body[data-suite] .bnav-btn.active:after{height:3px;left:45%;right:45%;background:var(--sase-gold)}
+.bnav-icon svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+body[data-suite] :is(.post-icon,.add-icon,.btn-post,.btn-submit){box-shadow:0 4px 14px #27759520}body[data-suite] .fav-btn.active,body[data-suite] .fav-star.active{color:#b88420}
+body[data-suite] .btn-delete-action{color:var(--sase-red);border-color:#e6cdd2}body[data-suite] .btn-resolve-action{background:linear-gradient(115deg,#25698e,#318fa6);box-shadow:var(--shadow-sm)}
+@media(max-width:600px){input:not([type=checkbox]):not([type=radio]),textarea,select{font-size:16px!important}button{min-height:44px}.nav-btn,.modal-close,.modal-close-btn,.btn-icon-add,.btn-gear-header{min-width:44px}.brand-title-link{min-height:44px;justify-content:center}.family-page{padding-left:16px;padding-right:16px}}
+@media(prefers-reduced-motion:no-preference){
+ .home-nav a:before{transition:background .2s ease,transform .22s var(--sase-ease)}.family-dragging .home-nav a:before{transition:none}
+ .panel-enter{animation:family-finish-enter .32s var(--sase-ease)}
+ @keyframes family-finish-enter{from{transform:translate3d(var(--panel-enter-x,0),0,0)}to{transform:translate3d(0,0,0)}}
+ :is(.quick-actions a,.family-page button,.app-card,.dash-card,.bnav-btn){transition:transform .18s var(--sase-ease),background-color .18s ease,box-shadow .18s ease}
+ :is(.quick-actions a,.family-page button,.app-card,.bnav-btn):active{transform:scale(.98)}
+ .family-dragging :is(#homePanel,#appsPanel,#schedulePanel){will-change:transform}
+}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.timeline-card,.timeline-card.visible,.h-divider{opacity:1;transform:none}}
+@media(prefers-color-scheme:dark){.agenda-essentials>span{background:#274d61;color:#c7e8f7}.agenda-essentials>span[data-state=unknown]{background:#4b402b;color:#f0d598}.agenda-essentials>span[data-state=unavailable]{background:#513740;color:#f2bcc4}.family-page .list-filters{background:#253f50}.family-page .list-filters button[aria-pressed=true],.family-page button[aria-pressed=true]{background:#315b72;color:#d8effa}body[data-kind] .family-page .panel{background:#203544}.family-page .item.done{background:#1c3443}.family-page .item-actions .item-delete,.family-page .status[data-state=error]{color:#f0abb6}.family-page .item-actions .item-delete{border-color:#73515b}}
+body[data-suite] .main-app{max-width:760px;margin:auto}body[data-suite] .bottom-nav{max-width:760px;margin:auto}body[data-suite=camp] .view{max-width:900px;margin:auto}body[data-suite=photo] .album-controls,body[data-suite=photo] #albumStatus{padding-left:20px;padding-right:20px}
+.brand-header{height:calc(100px + env(safe-area-inset-top));padding-top:calc(8px + env(safe-area-inset-top))}#schedulePanel{top:calc(100px + env(safe-area-inset-top))!important}.family-bar{padding-top:0}
+body[data-suite=photo] .streak-banner{background:#fff3d9;color:#87601d;border:1px solid #edd6a4;box-shadow:none}body[data-suite=photo] .bnav-btn[data-page=post].active .post-icon{background:linear-gradient(135deg,#25698e,#348fa9)}
+body:has(#accountStatus){background:var(--family-canvas);color:var(--family-ink)}body:has(#accountStatus) h1{color:var(--family-ink)}.family-page input,.family-page textarea{border-color:var(--family-line)}
