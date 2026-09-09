@@ -5,6 +5,10 @@ body{ -webkit-font-smoothing:antialiased }
 .home-nav a[aria-current]{background:#dfeadf;color:#234e39;font-weight:700}
 .home-nav span{font-size:11px;margin:0}.home-nav .nav-icon{display:block;width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .home-nav a:focus-visible{outline:3px solid #688b72;outline-offset:2px}
+.home-nav,#homePanel,#appsPanel,.family-embedded .app-header,.family-embedded .cal-nav,.family-embedded .week-scroll,.family-embedded .legend{touch-action:pan-y pinch-zoom}
+.home-nav{user-select:none;-webkit-user-select:none}.home-nav a[aria-current]{transform:translateX(calc(var(--nav-drag,0) * 110px))}.family-dragging{user-select:none;-webkit-user-select:none}.family-dragging .home-nav a{transition:none}
+body:has(#homePanel){overflow-x:clip}.agenda-essentials>span[data-state=unavailable]{background:#f6e6df;color:#914d36}
+@media(prefers-color-scheme:dark){.agenda-essentials>span[data-state=unavailable]{background:#513a31;color:#f1bda9}}
 .with-family-nav{padding-bottom:var(--family-nav-height)}
 .with-family-nav .fab{bottom:calc(var(--family-nav-height) + 16px)}
 body:has(#homePanel),body[data-kind]{background:radial-gradient(ellipse at 90% 0,#e3ede580,transparent 45%),var(--family-canvas)}

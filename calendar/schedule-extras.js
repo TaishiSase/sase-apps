@@ -18,14 +18,16 @@ function recurrenceDates(start,until,rule){
 }
 function resetScheduleExtras(s){
  document.getElementById('dropoffBy').value=s&&s.dropoff_by||'';
- document.getElementById('pickupBy').value=s&&s.pickup_by||'';
+ updateMorningDropoff(s?s.event_type:addEventType);
  document.getElementById('repeatRule').value='';
  document.getElementById('repeatUntil').value='';
  document.getElementById('repeatSettings').hidden=!!(s&&s.id);
  document.getElementById('repeatUntilRow').hidden=true;
  document.getElementById('seriesEditNote').hidden=!(s&&s.series_id);
 }
-function transportText(s){return (s.dropoff_by?'送り：'+TRANSPORT_LABELS[s.dropoff_by]:'')+(s.dropoff_by&&s.pickup_by?' ／ ':'')+(s.pickup_by?'迎え：'+TRANSPORT_LABELS[s.pickup_by]:'');}
+function morningDropoff(s){if(['早朝全日出社','出張'].includes(s.event_type))return 'できない';if(s.event_type==='全日出社')return 'できる';return TRANSPORT_LABELS[s.dropoff_by]||'未確認';}
+function updateMorningDropoff(type){var automatic=['早朝全日出社','出張','全日出社'].includes(type);document.getElementById('dropoffManual').hidden=automatic;document.getElementById('dropoffRule').textContent=automatic?'朝の送り：'+morningDropoff({event_type:type}):'朝の送り担当を選んでください';}
+function transportText(s){return '朝の送り：'+morningDropoff(s)+' ／ 迎え：ママ';}
 function renderScheduleExtras(s,body){
  var wrap=document.createElement('section');wrap.className='schedule-extras-view';
  var transport=transportText(s);if(transport){var p=document.createElement('p');p.textContent=transport;wrap.appendChild(p);}

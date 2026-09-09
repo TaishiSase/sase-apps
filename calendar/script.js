@@ -713,6 +713,7 @@ function renderTimeTypeGrid() {
 }
 
 function updateWorkFields() {
+  updateMorningDropoff(addEventType);
   var isOffice = addEventType && OFFICE_TYPES.indexOf(addEventType) !== -1;
   var isTrip   = addEventType === '出張';
   var isWork   = addEventType && WORK_TYPES.indexOf(addEventType) !== -1;
@@ -819,8 +820,8 @@ async function saveSchedule() {
   var repeatDates;try{repeatDates=recurrenceDates(addDate,document.getElementById('repeatUntil').value,repeatRule);}catch(e){showToast(e.message);return;}
   if(repeatRule&&(addImageFiles.length||addImageUrls.length)){showToast('画像は作成後、それぞれの予定に追加してください');return;}
   var record = {
-    dropoff_by:document.getElementById('dropoffBy').value||null,
-    pickup_by:document.getElementById('pickupBy').value||null,
+    dropoff_by:['早朝全日出社','出張','全日出社'].includes(addEventType)?null:document.getElementById('dropoffBy').value||null,
+    pickup_by:'mama',
     date:             addDate,
     date_end:         addDateEnd || null,
     member:           addMember,
@@ -1654,7 +1655,7 @@ function renderAgenda(){
     b.innerHTML='<span class="agenda-date">'+esc(getDateRangeLabel(s))+'</span><strong>'+esc(member.label)+' · '+esc(s.event_label||s.event_type)+'</strong><span>'+esc(getTimeLabel(s))+(s.return_time?' · 帰宅 '+esc(s.return_time.slice(0,5)):'')+'</span><small>'+(s.confirmed?'確認済み':'確認待ち')+'</small>';
     var essentials=document.createElement('span');essentials.className='agenda-essentials';
     var dinner=document.createElement('span');dinner.textContent='夕食：'+(s.needs_dinner===true?'いる':s.needs_dinner===false?'いらない':'未確認');dinner.dataset.state=s.needs_dinner==null?'unknown':'set';essentials.appendChild(dinner);
-    var dropoff=document.createElement('span');dropoff.textContent='朝の送り：'+(TRANSPORT_LABELS[s.dropoff_by]||'未確認');dropoff.dataset.state=TRANSPORT_LABELS[s.dropoff_by]?'set':'unknown';essentials.appendChild(dropoff);b.appendChild(essentials);
+    var dropoff=document.createElement('span');var morning=morningDropoff(s);dropoff.textContent='朝の送り：'+morning;dropoff.dataset.state=morning==='未確認'?'unknown':morning==='できない'?'unavailable':'set';essentials.appendChild(dropoff);b.appendChild(essentials);
     b.onclick=function(){openDetailModal(s);};host.appendChild(b);
   });
   }

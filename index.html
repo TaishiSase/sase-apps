@@ -397,7 +397,7 @@
       var panel=location.hash==='#apps'?'apps':location.hash==='#schedule'?'schedule':'home';
       if(currentPanel===panel)return;
       if(currentPanel && currentPanel!=='schedule')panelScroll[currentPanel]=window.scrollY;
-      document.body.style.setProperty('--panel-enter-x',(!currentPanel?0:['home','schedule','apps'].indexOf(panel)>['home','schedule','apps'].indexOf(currentPanel)?36:-36)+'px');
+      document.body.style.setProperty('--panel-enter-x',(window.familySwipeEntry!==undefined?window.familySwipeEntry:!currentPanel?0:['home','schedule','apps'].indexOf(panel)>['home','schedule','apps'].indexOf(currentPanel)?innerWidth:-innerWidth)+'px');delete window.familySwipeEntry;
       document.body.dataset.mainPanel=panel;
       ['home','apps','schedule'].forEach(function(name){var el=document.getElementById(name+'Panel');el.hidden=name!==panel;el.classList.toggle('panel-enter',name===panel);});
       document.querySelector('.hero').hidden=panel!=='home';
