@@ -5,7 +5,7 @@
  document.addEventListener('DOMContentLoaded', () => {
   // One-finger horizontal gestures only; keep fields, controls and sheets native.
   let touch=null,suppressClickUntil=0;
-  const blocked='input,textarea,select,button,[contenteditable],dialog,.modal-wrap,.modal-overlay,.sheet-overlay,.modal-backdrop,.week-scroll';
+  const blocked='input,textarea,select,button,[contenteditable],dialog,.modal-wrap,.modal-overlay,.sheet-overlay,.modal-backdrop,.week-scroll,.agenda-board';
   document.addEventListener('click',e=>{if(Date.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
   document.addEventListener('touchstart',e=>{
    const t=e.touches[0];

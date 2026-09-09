@@ -1636,17 +1636,27 @@ async function init() {
 }
 
 function renderAgenda(){
-  var start=view==='week'?dateStr(getWeekStart(navDate)):dateStr(new Date(navDate.getFullYear(),navDate.getMonth(),1));
-  var endDate=view==='week'?getWeekStart(navDate):new Date(navDate.getFullYear(),navDate.getMonth()+1,0);
+  var board=document.getElementById('agendaBoard');board.replaceChildren();board.classList.toggle('is-month',view==='month');
+  var base=view==='week'?getWeekStart(navDate):new Date(navDate.getFullYear(),navDate.getMonth(),1);
+  var thisWeek=dateStr(base)===dateStr(getWeekStart(new Date()));
+  for(var offset=0;offset<(view==='week'?3:1);offset++){
+  var startDate=new Date(base);startDate.setDate(startDate.getDate()+offset*7);
+  var endDate=view==='week'?new Date(startDate):new Date(navDate.getFullYear(),navDate.getMonth()+1,0);
   if(view==='week')endDate.setDate(endDate.getDate()+6);
-  var end=dateStr(endDate), list=schedules.filter(function(s){return isEventVisible(s) && s.date<=end && (s.date_end||s.date)>=start;});
-  var host=document.getElementById('agendaList');host.replaceChildren();
-  document.getElementById('agendaTitle').textContent=view==='week'?'この週の予定':'この月の予定';
-  if(!list.length){host.textContent='登録された予定はありません';return;}
+  var start=dateStr(startDate),end=dateStr(endDate),list=schedules.filter(function(s){return isEventVisible(s) && s.date<=end && (s.date_end||s.date)>=start;});
+  var section=document.createElement('section');section.className='agenda';
+  var heading=document.createElement('h2');heading.id=offset?'agendaTitle'+offset:'agendaTitle';heading.textContent=view==='month'?'この月の予定':(offset===0?'この週の予定':offset===1?(thisWeek?'来週の予定':'次の週の予定'):(thisWeek?'再来週の予定':'2週先の予定'));section.setAttribute('aria-labelledby',heading.id);section.appendChild(heading);
+  var range=document.createElement('p');range.className='agenda-range';range.textContent=(startDate.getMonth()+1)+'/'+startDate.getDate()+' – '+(endDate.getMonth()+1)+'/'+endDate.getDate()+' · '+list.length+'件';section.appendChild(range);
+  var host=document.createElement('div');host.id=offset?'agendaList'+offset:'agendaList';section.appendChild(host);board.appendChild(section);
+  if(!list.length){var empty=document.createElement('p');empty.className='agenda-empty';empty.textContent='登録された予定はありません';host.appendChild(empty);continue;}
   list.forEach(function(s){var b=document.createElement('button');b.className='agenda-row';
     var member=MEMBERS[s.member]||MEMBERS.all;
     b.innerHTML='<span class="agenda-date">'+esc(getDateRangeLabel(s))+'</span><strong>'+esc(member.label)+' · '+esc(s.event_label||s.event_type)+'</strong><span>'+esc(getTimeLabel(s))+(s.return_time?' · 帰宅 '+esc(s.return_time.slice(0,5)):'')+'</span><small>'+(s.confirmed?'確認済み':'確認待ち')+'</small>';
+    var essentials=document.createElement('span');essentials.className='agenda-essentials';
+    var dinner=document.createElement('span');dinner.textContent='夕食：'+(s.needs_dinner===true?'いる':s.needs_dinner===false?'いらない':'未確認');dinner.dataset.state=s.needs_dinner==null?'unknown':'set';essentials.appendChild(dinner);
+    var dropoff=document.createElement('span');dropoff.textContent='朝の送り：'+(TRANSPORT_LABELS[s.dropoff_by]||'未確認');dropoff.dataset.state=TRANSPORT_LABELS[s.dropoff_by]?'set':'unknown';essentials.appendChild(dropoff);b.appendChild(essentials);
     b.onclick=function(){openDetailModal(s);};host.appendChild(b);
   });
+  }
 }
 init();
