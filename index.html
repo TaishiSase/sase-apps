@@ -16,7 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="home.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-</head>
+<link rel="stylesheet" href="/family-polish.css"><script src="/family-navigation.js" defer></script></head>
 <body>
 <div class="page">
  <header class="hero"><div><p class="eyebrow" id="homeDate"></p><h1>本日の佐瀬家</h1><p class="hero-sub">予定も、思い出も。ここから。</p></div><span class="home-symbol" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" focusable="false"><path d="M8 21 24 8l16 13v18a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3Z" fill="currentColor" opacity=".09"/><path d="M5 22 22.1 8.1a3 3 0 0 1 3.8 0L43 22M10 20v19a3 3 0 0 0 3 3h22a3 3 0 0 0 3-3V20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 32s-7-4.1-7-8a3.8 3.8 0 0 1 7-2 3.8 3.8 0 0 1 7 2c0 3.9-7 8-7 8Z" fill="currentColor"/></svg></span></header>
@@ -42,12 +42,12 @@
    <a class="dash-card card-last-camp" href="https://sase-apps.vercel.app/camp/"><h3>前回のキャンプ</h3><div id="campLastContent">読み込み中…</div></a>
   </div></section>
  </main>
- <section id="appsPanel" hidden><div class="section-heading"><h2>家族のアプリ</h2></div><div class="app-grid" id="appGrid"></div></section>
- <footer class="footer">家族の毎日を、少し心地よく。</footer>
+ <section id="appsPanel" hidden><div class="apps-intro"><p class="eyebrow">OUR FAMILY APPS</p><h2>暮らしに、ひとつながり。</h2><p>予定も、記録も、これからの楽しみも。</p></div><div class="section-heading"><h2>家族のアプリ</h2><span class="section-caption">8つの小さな道具</span></div><div class="app-grid" id="appGrid"></div></section>
+ <section id="schedulePanel" hidden aria-label="共有予定帳"><p class="schedule-loading" id="scheduleLoading" role="status">予定帳を準備しています…</p><iframe id="scheduleFrame" title="夫婦の共有予定帳"></iframe></section><footer class="footer">家族の毎日を、少し心地よく。</footer>
 </div>
 <nav class="home-nav" aria-label="メインメニュー">
  <a href="#home" data-panel="home" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7M5 9v11h5v-6h4v6h5V9"/></svg><span>ホーム</span></a>
- <a href="https://sase-apps.vercel.app/calendar/"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16m-12 4h2m4 0h2m-8 3h2"/></svg><span>予定</span></a>
+ <a href="#schedule" data-panel="schedule"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16m-12 4h2m4 0h2m-8 3h2"/></svg><span>予定</span></a>
  <a href="#apps" data-panel="apps"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>アプリ</span></a>
 </nav>
 <script>
@@ -56,7 +56,7 @@
       {
         icon: '/icons/photo.svg',
         name:       '今日のことちゃん',
-        desc:       '娘の成長アルバム。毎日1枚の写真と短いコメントで記録。',
+        desc:       '今日の一枚を、家族の思い出に。',
         url:        'https://sase-apps.vercel.app/photo/',
         color: '#986776',
         colorLight: '#f2e5e9'
@@ -64,7 +64,7 @@
       {
         icon: '/icons/talk.svg',
         name:       'こんや話そ',
-        desc:       'ふたりの話し合いノート。いつか話したいことをメモして解決へ。',
+        desc:       '話したいことを、忘れないうちに。',
         url:        'https://sase-apps.vercel.app/talk/',
         color: '#94723f',
         colorLight: '#f3ecdd'
@@ -72,7 +72,7 @@
       {
         icon: '/icons/camp.svg',
         name:       'ふぁみキャン△',
-        desc:       'キャンプの計画・記録帳。メンバー・料理・買い出し・写真をまとめて管理。',
+        desc:       '次のキャンプの準備も、思い出も。',
         url:        'https://sase-apps.vercel.app/camp/',
         color: '#51745c',
         colorLight: '#e5eddf'
@@ -80,7 +80,7 @@
       {
         icon: '/icons/calendar.svg',
         name:       '夫婦の共有予定帳',
-        desc:       'パパ・ママ・琴音の予定を一目で共有。月・週カレンダーで管理。',
+        desc:       '家族の予定と送迎を、ひと目で。',
         url:        'https://sase-apps.vercel.app/calendar/',
         color: '#4f7588',
         colorLight: '#e5edf0'
@@ -88,7 +88,7 @@
       {
         icon: '/icons/muscle.svg',
         name:       'パパの筋トレ記録',
-        desc:       'トレーニングをカレンダーで管理。種目・重量・回数・体組成を記録。',
+        desc:       '毎日の積み重ねと、体の変化を。',
         url:        'https://sase-apps.vercel.app/muscle/',
         color: '#716080',
         colorLight: '#ede7f1'
@@ -96,13 +96,13 @@
       {
         icon: '/icons/startup.svg',
         name:       '嫁ちゃん起業奮闘記',
-        desc:       '家族の未来を少しずつ形にする新しいアプリ置き場。Hagumi「きょう、なにしよう。」を開発中。',
+        desc:       '暮らしのアイデアを、少しずつ形に。',
         url:        'yomechan-startup/',
         color: '#768047',
         colorLight: '#edf0df'
       }
-      ,{name:'佐瀬家のお買いもの',desc:'買うものをふたりで共有。買ったらチェック、あとから編集も。',url:'/shopping',icon:'/icons/shopping.svg',color:'#51745c',colorLight:'#e5eddf'},
-      {name:'週末どこ行く？',desc:'気になる場所を保存して、次のお出かけの予定へ。',url:'/outings',icon:'/icons/outings.svg',color:'#94723f',colorLight:'#f3ecdd'}
+      ,{name:'佐瀬家のお買いもの',desc:'買うものを共有。買い忘れを減らす。',url:'/shopping',icon:'/icons/shopping.svg',color:'#51745c',colorLight:'#e5eddf'},
+      {name:'週末どこ行く？',desc:'行きたい場所から、次の楽しみを。',url:'/outings',icon:'/icons/outings.svg',color:'#94723f',colorLight:'#f3ecdd'}
     ];
 
     function renderApps() {
@@ -392,11 +392,29 @@
       // 開いたまま日付が変わった場合だけ更新。通常の定期通信は行わない。
       setInterval(function(){if(homeDay!==yoteiDateStr(new Date())) refreshHomeIfNeeded();},60000);
     }
+    var currentPanel=null,panelScroll={};
     function showPanel() {
-      var apps=location.hash==='#apps';
-      document.getElementById('homePanel').hidden=apps;document.getElementById('appsPanel').hidden=!apps;
-      document.querySelectorAll('[data-panel]').forEach(function(a){if((a.dataset.panel==='apps')===apps)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+      var panel=location.hash==='#apps'?'apps':location.hash==='#schedule'?'schedule':'home';
+      if(currentPanel===panel)return;
+      if(currentPanel && currentPanel!=='schedule')panelScroll[currentPanel]=window.scrollY;
+      document.body.style.setProperty('--panel-enter-x',(!currentPanel?0:['home','schedule','apps'].indexOf(panel)>['home','schedule','apps'].indexOf(currentPanel)?36:-36)+'px');
+      document.body.dataset.mainPanel=panel;
+      ['home','apps','schedule'].forEach(function(name){var el=document.getElementById(name+'Panel');el.hidden=name!==panel;el.classList.toggle('panel-enter',name===panel);});
+      document.querySelector('.hero').hidden=panel!=='home';
+      document.querySelector('.footer').hidden=panel==='schedule';
+      document.querySelectorAll('[data-panel]').forEach(function(a){if(a.dataset.panel===panel)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+      if(panel==='schedule'){
+        var frame=document.getElementById('scheduleFrame');
+        if(!frame.hasAttribute('src')){frame.onload=function(){document.getElementById('scheduleLoading').hidden=true;};frame.src='/calendar/?embed=1';}
+        else frame.contentWindow.postMessage({type:'family-activate'},location.origin);
+      }else{window.scrollTo(0,panelScroll[panel]||0);if(currentPanel==='schedule')refreshHomeIfNeeded(true);}
+      currentPanel=panel;
     }
+    document.addEventListener('click',function(e){
+      var a=e.target.closest('a');if(!a || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button!==0)return;
+      var u=new URL(a.href,location.href);
+      if(u.origin===location.origin && /^\/calendar\/?$/.test(u.pathname) && !u.search){e.preventDefault();location.hash='schedule';}
+    });
     function setupDisplaySettings() {
       var saved = {};
       try { saved = JSON.parse(localStorage.getItem('sase-home-display-v1') || '{}') || {}; } catch (e) {}
