@@ -17,3 +17,5 @@
   .home-symbol{color:#b3d5a7}
 }
 .display-settings{margin:0 0 16px;border:1px solid #dce3d5;border-radius:16px;padding:0 14px;font-size:13px}.display-settings summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:#52694f}.display-settings summary:before{content:"＋";margin-right:8px}.display-settings[open] summary:before{content:"−"}.display-settings p{font-size:12px;color:#65766b;margin:0 0 10px}.display-options{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}.display-options label{display:flex;align-items:center;gap:9px;min-height:48px;cursor:pointer}.display-options input{width:20px;height:20px;flex-shrink:0;accent-color:#325a43}#displayStatus:empty{display:none}@media(prefers-color-scheme:dark){.display-settings{border-color:#435040}.display-settings summary,.display-settings p{color:#b5c2b7}}@media(max-width:360px){.display-options{grid-template-columns:1fr}}
+
+.card-icon-wrap img{display:block;width:30px;height:30px;object-fit:contain}

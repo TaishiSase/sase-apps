@@ -54,55 +54,55 @@
     // ===== アプリ一覧 =====
     var APPS = [
       {
-        emoji:      '📸',
+        icon: '/icons/photo.svg',
         name:       '今日のことちゃん',
         desc:       '娘の成長アルバム。毎日1枚の写真と短いコメントで記録。',
         url:        'https://sase-apps.vercel.app/photo/',
-        color:      '#E8748A',
-        colorLight: '#FFF0F5'
+        color: '#986776',
+        colorLight: '#f2e5e9'
       },
       {
-        emoji:      '🌙',
+        icon: '/icons/talk.svg',
         name:       'こんや話そ',
         desc:       'ふたりの話し合いノート。いつか話したいことをメモして解決へ。',
         url:        'https://sase-apps.vercel.app/talk/',
-        color:      '#F59E0B',
-        colorLight: '#FEF3C7'
+        color: '#94723f',
+        colorLight: '#f3ecdd'
       },
       {
-        emoji:      '⛺',
+        icon: '/icons/camp.svg',
         name:       'ふぁみキャン△',
         desc:       'キャンプの計画・記録帳。メンバー・料理・買い出し・写真をまとめて管理。',
         url:        'https://sase-apps.vercel.app/camp/',
-        color:      '#2D6A4F',
-        colorLight: '#D1FAE5'
+        color: '#51745c',
+        colorLight: '#e5eddf'
       },
       {
-        emoji:      '📅',
+        icon: '/icons/calendar.svg',
         name:       '夫婦の共有予定帳',
         desc:       'パパ・ママ・琴音の予定を一目で共有。月・週カレンダーで管理。',
         url:        'https://sase-apps.vercel.app/calendar/',
-        color:      '#5BA3D0',
-        colorLight: '#DBEAFE'
+        color: '#4f7588',
+        colorLight: '#e5edf0'
       },
       {
-        emoji:      '💪',
+        icon: '/icons/muscle.svg',
         name:       'パパの筋トレ記録',
         desc:       'トレーニングをカレンダーで管理。種目・重量・回数・体組成を記録。',
         url:        'https://sase-apps.vercel.app/muscle/',
-        color:      '#7C6FFF',
-        colorLight: '#EEF2FF'
+        color: '#716080',
+        colorLight: '#ede7f1'
       },
       {
-        emoji:      '🌱',
+        icon: '/icons/startup.svg',
         name:       '嫁ちゃん起業奮闘記',
         desc:       '家族の未来を少しずつ形にする新しいアプリ置き場。Hagumi「きょう、なにしよう。」を開発中。',
         url:        'yomechan-startup/',
-        color:      '#D98630',
-        colorLight: '#FFF3D6'
+        color: '#768047',
+        colorLight: '#edf0df'
       }
-      ,{name:'佐瀬家のお買いもの',desc:'買うものをふたりで共有。買ったらチェック、あとから編集も。',url:'/shopping',icon:'/icons/shopping.svg',color:'#315c47',colorLight:'#e2ecdf'},
-      {name:'週末どこ行く？',desc:'気になる場所を保存して、次のお出かけの予定へ。',url:'/outings',icon:'/icons/outings.svg',color:'#805427',colorLight:'#fff0d9'}
+      ,{name:'佐瀬家のお買いもの',desc:'買うものをふたりで共有。買ったらチェック、あとから編集も。',url:'/shopping',icon:'/icons/shopping.svg',color:'#51745c',colorLight:'#e5eddf'},
+      {name:'週末どこ行く？',desc:'気になる場所を保存して、次のお出かけの予定へ。',url:'/outings',icon:'/icons/outings.svg',color:'#94723f',colorLight:'#f3ecdd'}
     ];
 
     function renderApps() {
@@ -115,7 +115,7 @@
         card.className = 'app-card';
         card.innerHTML =
           '<div class="card-icon-wrap" style="background:' + app.colorLight + '">' +
-            (app.icon ? '<img src="'+app.icon+'" width="30" height="30" alt="" aria-hidden="true">' : '<span class="card-icon" aria-hidden="true">' + app.emoji + '</span>') +
+            '<img src="'+app.icon+'" width="30" height="30" alt="" aria-hidden="true">' +
           '</div>' +
           '<div class="card-body">' +
             '<h2 class="card-name">' + app.name + '</h2>' +

@@ -26,3 +26,6 @@ body[data-kind=outings] .family-page button.primary{background:#805427;color:#ff
  body[data-kind=outings] .family-page .panel{background:#322e25}
  body[data-kind=outings] .family-page button.primary{background:#926333}
 }
+
+/* App identities share one rounded line icon family. */
+.family-app-icon{display:inline-block;width:32px;height:32px;object-fit:contain;vertical-align:middle;flex-shrink:0;background:#f6f5f0;border-radius:9px;padding:3px}
