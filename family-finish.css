@@ -43,3 +43,4 @@ body[data-suite] .main-app{max-width:760px;margin:auto}body[data-suite] .bottom-
 .brand-header{height:calc(100px + env(safe-area-inset-top));padding-top:calc(8px + env(safe-area-inset-top))}#schedulePanel{top:calc(100px + env(safe-area-inset-top))!important}.family-bar{padding-top:0}
 body[data-suite=photo] .streak-banner{background:#fff3d9;color:#87601d;border:1px solid #edd6a4;box-shadow:none}body[data-suite=photo] .bnav-btn[data-page=post].active .post-icon{background:linear-gradient(135deg,#25698e,#348fa9)}
 body:has(#accountStatus){background:var(--family-canvas);color:var(--family-ink)}body:has(#accountStatus) h1{color:var(--family-ink)}.family-page input,.family-page textarea{border-color:var(--family-line)}
+.app-card:before{content:"";position:absolute;top:0;left:22px;width:28px;height:3px;border-radius:0 0 3px 3px;background:var(--sase-gold);pointer-events:none}
