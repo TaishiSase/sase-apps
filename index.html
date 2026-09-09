@@ -330,9 +330,10 @@
 
     function scheduleRows(data) {
       return data.map(function(s) {
-        var m=YOTEI_MEMBERS[s.member] || {label:'みんな',color:'#32785b'};
+        var member=Object.prototype.hasOwnProperty.call(YOTEI_MEMBERS,s.member)?s.member:'everyone';
+        var m=YOTEI_MEMBERS[member] || {label:'みんな'};
         var label=s.event_type==='custom' ? s.event_label || '予定' : s.event_type;
-        return '<a class="yotei-row" href="https://fufu-yotei.vercel.app/?date='+encodeURIComponent(s.date)+'&schedule='+encodeURIComponent(s.id)+'"><span class="yotei-date">'+yoteiFormatDate(s.date)+'</span><span class="yotei-member" style="color:'+m.color+'">'+esc(m.label)+'</span><span class="yotei-label">'+esc(label)+'</span><span class="yotei-check">'+(s.confirmed?'確認済み':'確認待ち')+'</span><span class="yotei-sub">'+(s.time_start?esc(s.time_start.slice(0,5))+'　':'')+(s.return_time?'帰宅 '+esc(s.return_time.slice(0,5))+'　':'')+(s.needs_dinner===true?'夕食あり':s.needs_dinner===false?'夕食なし':'')+'</span></a>';
+        return '<a class="yotei-row" href="https://fufu-yotei.vercel.app/?date='+encodeURIComponent(s.date)+'&schedule='+encodeURIComponent(s.id)+'"><span class="yotei-date">'+yoteiFormatDate(s.date)+'</span><span class="yotei-member" data-member="'+member+'">'+esc(m.label)+'</span><span class="yotei-label">'+esc(label)+'</span><span class="yotei-check">'+(s.confirmed?'確認済み':'確認待ち')+'</span><span class="yotei-sub">'+(s.time_start?esc(s.time_start.slice(0,5))+'　':'')+(s.return_time?'帰宅 '+esc(s.return_time.slice(0,5))+'　':'')+(s.needs_dinner===true?'夕食あり':s.needs_dinner===false?'夕食なし':'')+'</span></a>';
       }).join('');
     }
     async function loadYotei() {
@@ -354,11 +355,38 @@
         el.innerHTML=r.data?'<p class="metric">前回 '+yoteiFormatDate(r.data.date)+'</p><p class="empty">今日の記録を続けましょう。</p>':'<p class="empty">最初のトレーニングを記録しましょう。</p>';
       } catch(e) {el.innerHTML='<p class="empty">記録を読み込めませんでした。</p>';}
     }
+    var homeRefreshing=false, homeLastRefresh=0, homeDay='';
     async function refreshHome() {
+      if(homeRefreshing || !db) return;
+      var now=new Date();
+      document.getElementById('homeDate').textContent=now.toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'long'});
+      renderAge();
+      if(!navigator.onLine) {
+        document.getElementById('updateStatus').textContent='オフライン · 再接続すると更新します';
+        return;
+      }
+      homeRefreshing=true;
+      homeDay=yoteiDateStr(now);
       var button=document.getElementById('refreshHome'); button.disabled=true;button.textContent='更新中';
-      await Promise.allSettled([loadLatestPhoto(),loadTopics(),loadNextCamp(),loadLastCamp(),loadYotei(),loadMuscle()]);
-      button.disabled=false;button.textContent='更新';
-      document.getElementById('updateStatus').textContent='最終取得 '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+      try {
+        await Promise.allSettled([loadLatestPhoto(),loadTopics(),loadNextCamp(),loadLastCamp(),loadYotei(),loadMuscle()]);
+        homeLastRefresh=Date.now();
+        document.getElementById('updateStatus').textContent='最終取得 '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+      } finally {
+        homeRefreshing=false;button.disabled=false;button.textContent='更新';
+      }
+    }
+    function refreshHomeIfNeeded(force) {
+      if(document.visibilityState==='hidden' || !db) return;
+      if(force===true || homeDay!==yoteiDateStr(new Date()) || Date.now()-homeLastRefresh>=60000) refreshHome();
+    }
+    function setupHomeRefresh() {
+      document.addEventListener('visibilitychange',function(){refreshHomeIfNeeded();});
+      window.addEventListener('pageshow',function(){refreshHomeIfNeeded();});
+      window.addEventListener('online',function(){refreshHomeIfNeeded(true);});
+      window.addEventListener('offline',function(){document.getElementById('updateStatus').textContent='オフライン · 再接続すると更新します';});
+      // 開いたまま日付が変わった場合だけ更新。通常の定期通信は行わない。
+      setInterval(function(){if(homeDay!==yoteiDateStr(new Date())) refreshHomeIfNeeded();},60000);
     }
     function showPanel() {
       var apps=location.hash==='#apps';
@@ -414,6 +442,7 @@
         return;
       }
 
+      setupHomeRefresh();
       await refreshHome();
     }
 
